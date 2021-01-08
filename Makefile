@@ -28,9 +28,6 @@ lint:
 pb-fmt:
 	@clang-format -i ./pb/*.proto
 
-test:
-	go test -count=1 -v -p 1 $(shell go list ./...)
-
 clean:
 	rm -f $(ALL_TARGETS)
 

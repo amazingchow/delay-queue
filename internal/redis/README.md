@@ -1,0 +1,1 @@
+参考 https://github.com/amazingchow/photon-dance-docker-compose/blob/master/redis/docker-redis-ha.md 来搭建Redis测试环境

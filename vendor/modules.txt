@@ -1,3 +1,7 @@
+# github.com/FZambia/sentinel v1.1.0
+github.com/FZambia/sentinel
+# github.com/davecgh/go-spew v1.1.1
+github.com/davecgh/go-spew/spew
 # github.com/golang/protobuf v1.4.3
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go/descriptor
@@ -5,11 +9,18 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
+# github.com/gomodule/redigo v2.0.0+incompatible
+github.com/gomodule/redigo/redis
+github.com/gomodule/redigo/internal
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
 # github.com/rs/zerolog v1.20.0
 github.com/rs/zerolog
 github.com/rs/zerolog/log
 github.com/rs/zerolog/internal/cbor
 github.com/rs/zerolog/internal/json
+# github.com/stretchr/testify v1.6.1
+github.com/stretchr/testify/assert
 # golang.org/x/net v0.0.0-20200904194848-62affa334b73
 golang.org/x/net/trace
 golang.org/x/net/internal/timeseries
@@ -103,3 +114,5 @@ google.golang.org/protobuf/internal/detrand
 google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/timestamppb
 google.golang.org/protobuf/types/known/anypb
+# gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+gopkg.in/yaml.v3
