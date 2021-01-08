@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+option go_package = "github.com/amazingchow/photon-dance-delay-queue/api";
+package amazingchow.photon_dance_delay_queue;
+
+message Task
+{
+	string id = 1;
+	string attached_topic = 2;
+	int32 delay = 3;
+	int32 ttl = 4;
+	string payload = 5;
+}
+
+message PushTaskRequest
+{
+	Task task = 1;
+}
+
+message PushTaskResponse {}
+
+message FinishTaskRequest
+{
+	string task_id = 1;
+}
+
+message FinishTaskResponse {}
+
+message CheckTaskRequest
+{
+	string task_id = 1;
+}
+
+message CheckTaskResponse
+{
+	Task task = 1;
+}
+
+service TaskDelayQueueService
+{
+	rpc Push(PushTaskRequest) returns (PushTaskResponse);
+	rpc Finish(FinishTaskRequest) returns (FinishTaskResponse);
+	rpc Exist(CheckTaskRequest) returns (CheckTaskResponse);
+}
