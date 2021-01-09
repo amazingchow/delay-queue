@@ -5,10 +5,15 @@ package amazingchow.photon_dance_delay_queue;
 
 message Task
 {
+	/* 任务唯一标识, 用来检索/删除指定的任务 */
 	string id = 1;
+	/* 任务类型, 可以是具体的业务名称 */
 	string attached_topic = 2;
+	/* 任务需要延迟执行的时间, 单位: 秒 */
 	int32 delay = 3;
-	int32 ttl = 4;
+	/* 任务执行超时的时间, 单位: 秒 */
+	int32 ttr = 4;
+	/* 任务内容, 供消费者做具体的业务处理, 以json格式存储 */
 	string payload = 5;
 }
 
