@@ -33,6 +33,7 @@ func NewDelayQueue(cfg *conf.DelayQueue) *DelayQueue {
 }
 
 func (dq *DelayQueue) Close() {
+	redis.ReleaseInstance()
 	if dq.cancel != nil {
 		dq.cancel()
 	}

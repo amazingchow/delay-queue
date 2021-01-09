@@ -80,3 +80,17 @@ func (srv *taskDelayQueueServiceServer) CheckTask(ctx context.Context, req *pb.C
 		},
 	}, nil
 }
+
+func (srv *taskDelayQueueServiceServer) SubscribeTopic(ctx context.Context, req *pb.SubscribeTopicRequest) (*pb.SubscribeTopicResponse, error) {
+	if req.GetTopic() == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "empty topic")
+	}
+	return &pb.SubscribeTopicResponse{}, nil
+}
+
+func (srv *taskDelayQueueServiceServer) UnsubscribeTopic(ctx context.Context, req *pb.UnsubscribeTopicRequest) (*pb.UnsubscribeTopicResponse, error) {
+	if req.GetTopic() == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "empty topic")
+	}
+	return &pb.UnsubscribeTopicResponse{}, nil
+}

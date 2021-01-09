@@ -74,7 +74,9 @@ func GetOrCreateInstance(cfg *conf.Redis) *RedisPoolSingleton {
 
 func ReleaseInstance() {
 	onceClose.Do(func() {
-		instance.p.Close()
+		if instance != nil {
+			instance.p.Close()
+		}
 	})
 }
 
