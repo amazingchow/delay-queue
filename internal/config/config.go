@@ -2,7 +2,8 @@ package config
 
 type DelayQueue struct {
 	GRPCEndpoint string `json:"grpc_endpoint"` // grpc服务地址
-	Backend      *Redis `json:"backend"`
+	RedisBackend *Redis `json:"redis_backend"`
+	KafkaBackend *Kafka `json:"kafka_backend"`
 }
 
 type Redis struct {
@@ -15,4 +16,8 @@ type Redis struct {
 	RedisConnectTimeout int      `json:"redis_connect_timeout"` // 连接超时, 单位毫秒
 	RedisReadTimeout    int      `json:"redis_read_timeout"`    // 读取超时, 单位毫秒
 	RedisWriteTimeout   int      `json:"redis_write_timeout"`   // 写入超时, 单位毫秒
+}
+
+type Kafka struct {
+	KafkaBrokers []string `json:"kafka_brokers"`
 }

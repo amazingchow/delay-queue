@@ -6,8 +6,11 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"google.golang.org/protobuf/proto"
 
+	pb "github.com/amazingchow/photon-dance-delay-queue/api"
 	conf "github.com/amazingchow/photon-dance-delay-queue/internal/config"
+	"github.com/amazingchow/photon-dance-delay-queue/internal/kafka"
 	"github.com/amazingchow/photon-dance-delay-queue/internal/redis"
 )
 
@@ -22,6 +25,8 @@ type DelayQueue struct {
 
 	bucketCh <-chan string
 	redisCli *redis.RedisPoolSingleton
+
+	producer *kafka.Producer
 }
 
 func NewDelayQueue(cfg *conf.DelayQueue) *DelayQueue {
@@ -36,7 +41,9 @@ func NewDelayQueue(cfg *conf.DelayQueue) *DelayQueue {
 		readyQueueRWChannel: make(chan *RedisRWRequest, 1024),
 
 		bucketCh: spawnBuckets(ctx),
-		redisCli: redis.GetOrCreateInstance(cfg.Backend),
+		redisCli: redis.GetOrCreateInstance(cfg.RedisBackend),
+
+		producer: kafka.NewProducer(cfg.KafkaBackend),
 	}
 	go dq.handleTaskRWRequest(ctx)
 	go dq.handleTopicRWRequest(ctx)
@@ -52,6 +59,7 @@ func (dq *DelayQueue) Close() {
 	if dq.cancel != nil {
 		dq.cancel()
 	}
+	dq.producer.Close()
 }
 
 func spawnBuckets(ctx context.Context) <-chan string {
@@ -420,8 +428,15 @@ POLL_LOOP:
 					log.Error().Err(outs.Err).Msgf("failed to add task <id: %s> into bucket", task.Id)
 				}
 
-				// TODO: publish ready task
-				// TODO: produce to kafka
+				// publish ready task to kafka
+				msg, _ := proto.Marshal(&pb.Task{
+					Id:            task.Id,
+					AttachedTopic: task.Topic,
+					Payload:       task.Blob,
+				})
+				if err := dq.producer.Publish(task.Topic, msg); err != nil {
+					log.Error().Err(err).Msgf("failed to publish ready task <id: %s>", task.Id)
+				}
 			}
 		}
 	}
