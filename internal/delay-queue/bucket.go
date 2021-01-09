@@ -9,11 +9,13 @@ type BucketItem struct {
 	TaskTimestamp int64
 }
 
+// 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (dq *DelayQueue) pushToBucket(key string, timestamp int64, id string) error {
 	_, err := dq.redisCli.ExecCommand("ZADD", key, timestamp, id)
 	return err
 }
 
+// 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (dq *DelayQueue) getFromBucket(key string) (*BucketItem, error) {
 	v, err := dq.redisCli.ExecCommand("ZRANGE", key, 0, 0, "WITHSCORES")
 	if err != nil {
@@ -34,6 +36,7 @@ func (dq *DelayQueue) getFromBucket(key string) (*BucketItem, error) {
 	return &item, nil
 }
 
+// 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (dq *DelayQueue) delFromBucket(key string, id string) error {
 	_, err := dq.redisCli.ExecCommand("ZREM", key, id)
 	return err
