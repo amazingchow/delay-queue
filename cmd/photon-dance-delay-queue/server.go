@@ -85,12 +85,18 @@ func (srv *taskDelayQueueServiceServer) SubscribeTopic(ctx context.Context, req 
 	if req.GetTopic() == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "empty topic")
 	}
+	if err := srv.dq.PushTopic(req.GetTopic()); err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
 	return &pb.SubscribeTopicResponse{}, nil
 }
 
 func (srv *taskDelayQueueServiceServer) UnsubscribeTopic(ctx context.Context, req *pb.UnsubscribeTopicRequest) (*pb.UnsubscribeTopicResponse, error) {
 	if req.GetTopic() == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "empty topic")
+	}
+	if err := srv.dq.RemoveTopic(req.GetTopic()); err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 	return &pb.UnsubscribeTopicResponse{}, nil
 }
