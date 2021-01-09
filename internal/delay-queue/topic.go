@@ -34,3 +34,8 @@ func (dq *DelayQueue) hasTopic(key, topic string) (bool, error) {
 	}
 	return v.(int64) == 1, nil
 }
+
+func (dq *DelayQueue) delTopic(key, topic string) error {
+	_, err := dq.redisCli.ExecCommand("SREM", key, topic)
+	return err
+}

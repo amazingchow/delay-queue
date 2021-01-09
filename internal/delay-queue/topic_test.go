@@ -52,5 +52,13 @@ func TestTopicCURD(t *testing.T) {
 		assert.Equal(t, fakeTopis[idx], allTopics[idx])
 	}
 
+	for _, topic := range fakeTopis {
+		err := dq.delTopic(DefaultTopicSetName, topic)
+		assert.Empty(t, err)
+		has, err := dq.hasTopic(DefaultTopicSetName, topic)
+		assert.Empty(t, err)
+		assert.Equal(t, false, has)
+	}
+
 	redis.ReleaseInstance()
 }
