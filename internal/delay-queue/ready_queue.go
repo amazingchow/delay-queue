@@ -4,12 +4,14 @@ import (
 	"fmt"
 )
 
+// 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (dq *DelayQueue) pushToReadyQueue(topic string, jobId string) error {
 	readyQ := fmt.Sprintf(DefaultReadyQueueNameFormatter, topic)
 	_, err := dq.redisCli.ExecCommand("RPUSH", readyQ, jobId)
 	return err
 }
 
+// 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (dq *DelayQueue) blockPopFromReadyQueue(topics []string, timeout int) (string, error) {
 	var args []interface{}
 	for _, topic := range topics {

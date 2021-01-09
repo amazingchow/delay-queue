@@ -12,6 +12,7 @@ type Task struct {
 	Blob  string `json:"blob" msgpack:"5"`  // 任务内容, 供消费者做具体的业务处理, 以json格式存储
 }
 
+// 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (dq *DelayQueue) putTask(key string, task *Task) error {
 	v, err := msgpack.Marshal(task)
 	if err != nil {
@@ -21,6 +22,7 @@ func (dq *DelayQueue) putTask(key string, task *Task) error {
 	return err
 }
 
+// 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (dq *DelayQueue) getTask(key string) (*Task, error) {
 	v, err := dq.redisCli.ExecCommand("GET", key)
 	if err != nil {
@@ -37,6 +39,7 @@ func (dq *DelayQueue) getTask(key string) (*Task, error) {
 	return &task, nil
 }
 
+// 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (dq *DelayQueue) delTask(key string) error {
 	_, err := dq.redisCli.ExecCommand("DEL", key)
 	return err
