@@ -22,12 +22,6 @@ ifeq ("$(GOMODULEPATH)", "")
 endif
 	go build $(BUILD_FLAGS) $(GOMODULEPATH)/$(PROJECT)/cmd/$@
 
-lint:
-	@golangci-lint run --skip-dirs=api --deadline=5m
-
-pb-fmt:
-	@clang-format -i ./pb/*.proto
-
 clean:
 	rm -f $(ALL_TARGETS)
 
