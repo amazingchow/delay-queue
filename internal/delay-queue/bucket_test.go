@@ -1,7 +1,9 @@
 package delayqueue
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -9,7 +11,7 @@ import (
 	"github.com/amazingchow/photon-dance-delay-queue/internal/redis"
 )
 
-func TestTaskCURD(t *testing.T) {
+func TestBucketCURD(t *testing.T) {
 	fakeRedisCfg := &conf.Redis{
 		SentinelEndpoints:   []string{"localhost:26379", "localhost:26380", "localhost:26381"},
 		SentinelMasterName:  "mymaster",
@@ -25,43 +27,36 @@ func TestTaskCURD(t *testing.T) {
 	dq := &DelayQueue{
 		redisCli: redis.GetOrCreateInstance(fakeRedisCfg),
 	}
+	fakeBucket := fmt.Sprintf(DefaultBucketNameFormatter, 1)
+	// 先清理环境
+	_, err := dq.redisCli.ExecCommand("DEL", fakeBucket)
+	assert.Empty(t, err)
 
-	fakeTasks := []*Task{
-		&Task{
-			Topic: "shopping_cart_service_line",
-			Id:    "ff74da2f-20c1-45c4-9570-a01b192f1c9d",
-			Delay: 120,
-			TTR:   180,
-		},
-		&Task{
-			Topic: "order_service_line",
-			Id:    "3fa03ec8-9d75-4002-914b-e7b79f25c323",
-			Delay: 120,
-			TTR:   180,
-		},
-		&Task{
-			Topic: "inventory_service_line",
-			Id:    "f58d644e-a2fc-44ce-851c-7530390cfcea",
-			Delay: 120,
-			TTR:   180,
-		},
+	fakeTaskIds := []string{
+		"ff74da2f-20c1-45c4-9570-a01b192f1c9d",
+		"3fa03ec8-9d75-4002-914b-e7b79f25c323",
+		"f58d644e-a2fc-44ce-851c-7530390cfce",
 	}
-	for _, task := range fakeTasks {
-		err := dq.putTask(task.Id, task)
+	for _, taskId := range fakeTaskIds {
+		err = dq.pushToBucket(fakeBucket, time.Now().Unix(), taskId)
 		assert.Empty(t, err)
+		time.Sleep(time.Second)
 	}
-	for _, task := range fakeTasks {
-		retTask, err := dq.getTask(task.Id)
-		assert.Empty(t, err)
-		assert.Equal(t, task.Topic, retTask.Topic)
 
-		err = dq.delTask(task.Id)
+	next := 0
+	for {
+		item, err := dq.getFromBucket(fakeBucket)
 		assert.Empty(t, err)
+		if item == nil {
+			break
+		}
+		assert.Equal(t, fakeTaskIds[next], item.TaskId)
 
-		retTask, err = dq.getTask(task.Id)
+		err = dq.delFromBucket(fakeBucket, item.TaskId)
 		assert.Empty(t, err)
-		assert.Empty(t, retTask)
+		next++
 	}
+	assert.Equal(t, 3, next)
 
 	redis.ReleaseInstance()
 }

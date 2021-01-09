@@ -4,9 +4,10 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	conf "github.com/amazingchow/photon-dance-delay-queue/internal/config"
 	"github.com/amazingchow/photon-dance-delay-queue/internal/redis"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestTopicCURD(t *testing.T) {
