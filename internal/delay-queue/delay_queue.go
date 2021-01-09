@@ -12,19 +12,30 @@ import (
 )
 
 type DelayQueue struct {
-	ctx      context.Context
+	ctx    context.Context
+	cancel context.CancelFunc
+
 	bucketCh <-chan string
 	redisCli *redis.RedisPoolSingleton
 }
 
-func NewDelayQueue(ctx context.Context, cfg *conf.DelayQueue) *DelayQueue {
+func NewDelayQueue(cfg *conf.DelayQueue) *DelayQueue {
+	ctx, cancel := context.WithCancel(context.Background())
 	dq := &DelayQueue{
 		ctx:      ctx,
+		cancel:   cancel,
 		bucketCh: spawnBuckets(ctx),
 		redisCli: redis.GetOrCreateInstance(cfg.Backend),
 	}
+	go dq.startAllTimers(ctx)
 	go dq.poll(ctx)
 	return dq
+}
+
+func (dq *DelayQueue) Close() {
+	if dq.cancel != nil {
+		dq.cancel()
+	}
 }
 
 func spawnBuckets(ctx context.Context) <-chan string {
@@ -86,9 +97,9 @@ func (dq *DelayQueue) Get(taskId string) (*Task, error) {
 	return task, nil
 }
 
-func (dq *DelayQueue) startAllTimers() {
+func (dq *DelayQueue) startAllTimers(ctx context.Context) {
 	for i := 0; i < DefaultBucketCnt; i++ {
-		go dq.handleTimer(dq.ctx, fmt.Sprintf(DefaultBucketNameFormatter, i))
+		go dq.handleTimer(ctx, fmt.Sprintf(DefaultBucketNameFormatter, i))
 	}
 }
 
