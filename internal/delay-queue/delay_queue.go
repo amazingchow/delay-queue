@@ -81,7 +81,7 @@ func spawnBuckets(ctx context.Context) <-chan string {
 }
 
 func (dq *DelayQueue) Push(task *Task) error {
-	/* start add task */
+	/* start to add task */
 	resp := make(chan *RedisRWResponse)
 	req := &RedisRWRequest{
 		RequestType: TaskRequest,
@@ -96,7 +96,7 @@ func (dq *DelayQueue) Push(task *Task) error {
 		return outs.Err
 	}
 
-	/* start push task into bucket */
+	/* start to push task into bucket */
 	resp = make(chan *RedisRWResponse)
 	req = &RedisRWRequest{
 		RequestType: BucketRequest,
@@ -114,7 +114,7 @@ func (dq *DelayQueue) Push(task *Task) error {
 }
 
 func (dq *DelayQueue) Remove(taskId string) error {
-	/* start delete task */
+	/* start to delete task */
 	resp := make(chan *RedisRWResponse)
 	req := &RedisRWRequest{
 		RequestType: TaskRequest,
@@ -132,7 +132,7 @@ func (dq *DelayQueue) Remove(taskId string) error {
 }
 
 func (dq *DelayQueue) Get(taskId string) (*Task, error) {
-	/* start get task */
+	/* start to get task */
 	resp := make(chan *RedisRWResponse)
 	req := &RedisRWRequest{
 		RequestType: TaskRequest,
@@ -155,7 +155,7 @@ func (dq *DelayQueue) Get(taskId string) (*Task, error) {
 }
 
 func (dq *DelayQueue) PushTopic(topic string) error {
-	/* start add task */
+	/* start to add topic */
 	resp := make(chan *RedisRWResponse)
 	req := &RedisRWRequest{
 		RequestType: TopicRequest,
@@ -173,7 +173,7 @@ func (dq *DelayQueue) PushTopic(topic string) error {
 }
 
 func (dq *DelayQueue) RemoveTopic(topic string) error {
-	/* start delete topic */
+	/* start to delete topic */
 	resp := make(chan *RedisRWResponse)
 	req := &RedisRWRequest{
 		RequestType: TopicRequest,
@@ -215,7 +215,7 @@ TICK_LOOP:
 
 func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 	for {
-		/* start get task from bucket */
+		/* start to get task from bucket */
 		resp := make(chan *RedisRWResponse)
 		req := &RedisRWRequest{
 			RequestType: BucketRequest,
@@ -239,7 +239,7 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 		}
 
 		// 延迟执行时间小于等于当前时间, 取出任务并放入ReadyQueue
-		/* start get task */
+		/* start to get task */
 		resp = make(chan *RedisRWResponse)
 		req = &RedisRWRequest{
 			RequestType: TaskRequest,
@@ -256,7 +256,7 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 		task := outs.Outputs[0].(*Task)
 		// 任务不存在, 可能已被删除, 马上从bucket中删除
 		if task == nil {
-			/* start delete task from bucket */
+			/* start to delete task from bucket */
 			resp := make(chan *RedisRWResponse)
 			req := &RedisRWRequest{
 				RequestType: BucketRequest,
@@ -273,7 +273,7 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 		}
 		// 再次确认任务延迟执行时间是否小于等于当前时间
 		if task.Delay <= t.Unix() {
-			/* start push task into ready queue */
+			/* start to push task into ready queue */
 			resp := make(chan *RedisRWResponse)
 			req := &RedisRWRequest{
 				RequestType: ReadyQueueRequest,
@@ -288,7 +288,7 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 				continue
 			}
 
-			/* start delete task from bucket */
+			/* start to delete task from bucket */
 			resp = make(chan *RedisRWResponse)
 			req = &RedisRWRequest{
 				RequestType: BucketRequest,
@@ -302,7 +302,7 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 				log.Error().Err(outs.Err).Msgf("failed to remove task <id: %s> from bucket", task.Id)
 			}
 		} else {
-			/* start delete task from bucket */
+			/* start to delete task from bucket */
 			resp := make(chan *RedisRWResponse)
 			req := &RedisRWRequest{
 				RequestType: BucketRequest,
@@ -318,7 +318,7 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 			}
 
 			// 重新放入bucket中
-			/* start push task into bucket */
+			/* start to push task into bucket */
 			resp = make(chan *RedisRWResponse)
 			req = &RedisRWRequest{
 				RequestType: BucketRequest,
@@ -345,19 +345,35 @@ POLL_LOOP:
 			}
 		default:
 			{
-				// TODO: get all subscribed topics
-				topics := make([]string, 0)
-
-				/* start pop task from ready queue */
+				/* start to get all subscribed topics */
 				resp := make(chan *RedisRWResponse)
 				req := &RedisRWRequest{
+					RequestType: TopicRequest,
+					RequestOp:   ListTopicRequest,
+					Inputs:      []interface{}{DefaultTopicSetName},
+					ResponseCh:  resp,
+				}
+				dq.sendRedisRWRequest(req)
+				outs := <-resp
+				if outs.Err != nil {
+					log.Error().Err(outs.Err).Msg("failed to list topic")
+					continue
+				}
+				topics := outs.Outputs[0].([]string)
+				if len(topics) == 0 {
+					continue
+				}
+
+				/* start to pop task from ready queue */
+				resp = make(chan *RedisRWResponse)
+				req = &RedisRWRequest{
 					RequestType: ReadyQueueRequest,
 					RequestOp:   BlockPopFromReadyQueueRequest,
 					Inputs:      []interface{}{topics, 120},
 					ResponseCh:  resp,
 				}
 				dq.sendRedisRWRequest(req)
-				outs := <-resp
+				outs = <-resp
 				if outs.Err != nil {
 					log.Error().Err(outs.Err).Msg("failed to pop from ready queue")
 					continue
@@ -367,7 +383,7 @@ POLL_LOOP:
 					continue
 				}
 
-				/* start get task */
+				/* start to get task */
 				resp = make(chan *RedisRWResponse)
 				req = &RedisRWRequest{
 					RequestType: TaskRequest,
@@ -390,7 +406,7 @@ POLL_LOOP:
 				// TTR的设计目的是为了保证消息传输的可靠性
 				// 任务执行完成后, 消费端需要调用finish接口去删除任务, 否则任务会重复投递, 消费端必须能处理同一任务多次投递的情形
 				timestamp := time.Now().Unix() + task.TTR
-				/* start push task into bucket */
+				/* start to push task into bucket */
 				resp = make(chan *RedisRWResponse)
 				req = &RedisRWRequest{
 					RequestType: BucketRequest,
@@ -405,6 +421,7 @@ POLL_LOOP:
 				}
 
 				// TODO: publish ready task
+				// TODO: produce to kafka
 			}
 		}
 	}
