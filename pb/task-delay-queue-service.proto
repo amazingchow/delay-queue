@@ -41,9 +41,27 @@ message CheckTaskResponse
 	Task task = 1;
 }
 
+message SubscribeTopicRequest
+{
+	string topic = 1;
+}
+
+message SubscribeTopicResponse {}
+
+message UnsubscribeTopicRequest
+{
+	string topic = 1;
+}
+
+message UnsubscribeTopicResponse {}
+
 service TaskDelayQueueService
 {
-	rpc Push(PushTaskRequest) returns (PushTaskResponse);
-	rpc Finish(FinishTaskRequest) returns (FinishTaskResponse);
-	rpc Exist(CheckTaskRequest) returns (CheckTaskResponse);
+	/* for task producers */
+	rpc PushTask(PushTaskRequest) returns (PushTaskResponse);
+	rpc FinishTask(FinishTaskRequest) returns (FinishTaskResponse);
+	rpc CheckTask(CheckTaskRequest) returns (CheckTaskResponse);
+	/* for task comsumers */
+	rpc SubscribeTopic(SubscribeTopicRequest) returns (SubscribeTopicResponse);
+	rpc UnsubscribeTopic(UnsubscribeTopicRequest) returns (UnsubscribeTopicResponse);
 }

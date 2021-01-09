@@ -27,7 +27,7 @@ func (srv *taskDelayQueueServiceServer) close() {
 	srv.dq.Close()
 }
 
-func (srv *taskDelayQueueServiceServer) Push(ctx context.Context, req *pb.PushTaskRequest) (*pb.PushTaskResponse, error) {
+func (srv *taskDelayQueueServiceServer) PushTask(ctx context.Context, req *pb.PushTaskRequest) (*pb.PushTaskResponse, error) {
 	if req.GetTask().GetId() == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "empty task id")
 	}
@@ -53,7 +53,7 @@ func (srv *taskDelayQueueServiceServer) Push(ctx context.Context, req *pb.PushTa
 	return &pb.PushTaskResponse{}, nil
 }
 
-func (srv *taskDelayQueueServiceServer) Finish(ctx context.Context, req *pb.FinishTaskRequest) (*pb.FinishTaskResponse, error) {
+func (srv *taskDelayQueueServiceServer) FinishTask(ctx context.Context, req *pb.FinishTaskRequest) (*pb.FinishTaskResponse, error) {
 	if req.GetTaskId() == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "empty task id")
 	}
@@ -63,7 +63,7 @@ func (srv *taskDelayQueueServiceServer) Finish(ctx context.Context, req *pb.Fini
 	return &pb.FinishTaskResponse{}, nil
 }
 
-func (srv *taskDelayQueueServiceServer) Exist(ctx context.Context, req *pb.CheckTaskRequest) (*pb.CheckTaskResponse, error) {
+func (srv *taskDelayQueueServiceServer) CheckTask(ctx context.Context, req *pb.CheckTaskRequest) (*pb.CheckTaskResponse, error) {
 	if req.GetTaskId() == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "empty task id")
 	}
