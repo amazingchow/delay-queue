@@ -118,6 +118,7 @@ func (dq *DelayQueue) Push(task *Task) error {
 		log.Error().Err(outs.Err).Msgf("failed to add task <id: %s> into bucket", task.Id)
 		return outs.Err
 	}
+	log.Debug().Msgf("add a new task <%s>", task.Id)
 	return nil
 }
 
@@ -136,6 +137,7 @@ func (dq *DelayQueue) Remove(taskId string) error {
 		log.Error().Err(outs.Err).Msgf("failed to remove task <id: %s>", taskId)
 		return outs.Err
 	}
+	log.Debug().Msgf("delete a task <%s>", taskId)
 	return nil
 }
 

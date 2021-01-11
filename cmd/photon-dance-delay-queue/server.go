@@ -71,6 +71,9 @@ func (srv *taskDelayQueueServiceServer) CheckTask(ctx context.Context, req *pb.C
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	if task == nil {
+		return &pb.CheckTaskResponse{}, nil
+	}
 	return &pb.CheckTaskResponse{
 		Task: &pb.Task{
 			Id:            task.Id,

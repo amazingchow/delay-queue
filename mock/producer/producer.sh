@@ -16,18 +16,18 @@ echo "/**************************************************/"
 echo "add one task"
 cat task01.json | grpcurl -plaintext -d @ localhost:18081 amazingchow.photon_dance_delay_queue.TaskDelayQueueService/PushTask
 echo "/**************************************************/"
-echo "check the task"
-grpcurl -plaintext -d '{"task_id": "fecb0b56-ff6c-4426-a257-d51781a9cd44"}' localhost:18081 amazingchow.photon_dance_delay_queue.TaskDelayQueueService/CheckTask
-echo "/**************************************************/"
 echo "add one task"
 cat task02.json | grpcurl -plaintext -d @ localhost:18081 amazingchow.photon_dance_delay_queue.TaskDelayQueueService/PushTask
-echo "/**************************************************/"
-echo "check the task"
-grpcurl -plaintext -d '{"task_id": "51e5b426-3f5f-4044-b469-713b56bceb3a"}' localhost:18081 amazingchow.photon_dance_delay_queue.TaskDelayQueueService/CheckTask
 echo "/**************************************************/"
 echo "add one task"
 cat task03.json | grpcurl -plaintext -d @ localhost:18081 amazingchow.photon_dance_delay_queue.TaskDelayQueueService/PushTask
 echo "/**************************************************/"
-echo "check the task"
-grpcurl -plaintext -d '{"task_id": "50365010-30c7-42a7-9550-9a65e57bc021"}' localhost:18081 amazingchow.photon_dance_delay_queue.TaskDelayQueueService/CheckTask
+echo "add one task"
+cat task04.json | grpcurl -plaintext -d @ localhost:18081 amazingchow.photon_dance_delay_queue.TaskDelayQueueService/PushTask
+echo "/**************************************************/"
+echo "add one task"
+cat task05.json | grpcurl -plaintext -d @ localhost:18081 amazingchow.photon_dance_delay_queue.TaskDelayQueueService/PushTask
+echo "/**************************************************/"
+echo "add one task"
+cat task06.json | grpcurl -plaintext -d @ localhost:18081 amazingchow.photon_dance_delay_queue.TaskDelayQueueService/PushTask
 echo "/**************************************************/"
