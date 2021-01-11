@@ -15,3 +15,5 @@
 # vendor/
 
 /photon-dance-delay-queue
+/mock/consumer/venv
+/mock/consumer/api/__pycache__

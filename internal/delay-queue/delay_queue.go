@@ -118,6 +118,7 @@ func (dq *DelayQueue) Push(task *Task) error {
 		log.Error().Err(outs.Err).Msgf("failed to add task <id: %s> into bucket", task.Id)
 		return outs.Err
 	}
+	log.Debug().Msgf("add a new task <%s>", task.Id)
 	return nil
 }
 
@@ -136,6 +137,7 @@ func (dq *DelayQueue) Remove(taskId string) error {
 		log.Error().Err(outs.Err).Msgf("failed to remove task <id: %s>", taskId)
 		return outs.Err
 	}
+	log.Debug().Msgf("delete a task <%s>", taskId)
 	return nil
 }
 
@@ -168,7 +170,7 @@ func (dq *DelayQueue) PushTopic(topic string) error {
 	req := &RedisRWRequest{
 		RequestType: TopicRequest,
 		RequestOp:   PutTopicRequest,
-		Inputs:      []interface{}{topic},
+		Inputs:      []interface{}{DefaultTopicSetName, topic},
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
@@ -186,7 +188,7 @@ func (dq *DelayQueue) RemoveTopic(topic string) error {
 	req := &RedisRWRequest{
 		RequestType: TopicRequest,
 		RequestOp:   DelTopicRequest,
-		Inputs:      []interface{}{topic},
+		Inputs:      []interface{}{DefaultTopicSetName, topic},
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
@@ -371,13 +373,14 @@ POLL_LOOP:
 				if len(topics) == 0 {
 					continue
 				}
+				log.Debug().Msgf("all subscribed topics: %v", topics)
 
 				/* start to pop task from ready queue */
 				resp = make(chan *RedisRWResponse)
 				req = &RedisRWRequest{
 					RequestType: ReadyQueueRequest,
 					RequestOp:   BlockPopFromReadyQueueRequest,
-					Inputs:      []interface{}{topics, 120},
+					Inputs:      []interface{}{topics, DefaultBlockPopFromReadyQueueTimeout},
 					ResponseCh:  resp,
 				}
 				dq.sendRedisRWRequest(req)
@@ -390,6 +393,7 @@ POLL_LOOP:
 				if taskId == "" {
 					continue
 				}
+				log.Debug().Msgf("get ready task <%s>", taskId)
 
 				/* start to get task */
 				resp = make(chan *RedisRWResponse)
@@ -437,6 +441,7 @@ POLL_LOOP:
 				if err := dq.producer.Publish(task.Topic, msg); err != nil {
 					log.Error().Err(err).Msgf("failed to publish ready task <id: %s>", task.Id)
 				}
+				log.Debug().Msgf("send ready task <%s> to kafka", taskId)
 			}
 		}
 	}

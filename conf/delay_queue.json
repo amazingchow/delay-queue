@@ -1,0 +1,17 @@
+{
+    "grpc_endpoint": "localhost:18081",
+    "redis_backend": {
+        "sentinel_endpoints": ["localhost:26379", "localhost:26380", "localhost:26381"],
+        "sentinel_master_name": "mymaster",
+        "sentinel_password": "Pwd123!@",
+        "redis_master_password": "sOmE_sEcUrE_pAsS",
+        "redis_pool_max_idle": 3,
+        "redis_pool_max_active": 64,
+        "redis_connect_timeout": 500,
+        "redis_read_timeout": 500,
+        "redis_write_timeout": 500
+    },
+    "kafka_backend": {
+        "kafka_brokers": ["localhost:9092"]
+    }
+}

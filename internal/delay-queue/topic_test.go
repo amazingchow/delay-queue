@@ -26,6 +26,7 @@ func TestTopicCURD(t *testing.T) {
 	dq := &DelayQueue{
 		redisCli: redis.GetOrCreateInstance(fakeRedisCfg),
 	}
+
 	// 先清理环境
 	_, err := dq.redisCli.ExecCommand("DEL", DefaultTopicSetName)
 	assert.Empty(t, err)
@@ -59,6 +60,10 @@ func TestTopicCURD(t *testing.T) {
 		assert.Empty(t, err)
 		assert.Equal(t, false, has)
 	}
+
+	// 退出之前, 再次清理环境
+	_, err = dq.redisCli.ExecCommand("DEL", DefaultTopicSetName)
+	assert.Empty(t, err)
 
 	redis.ReleaseInstance()
 }

@@ -28,6 +28,7 @@ func TestReadyQueueCURD(t *testing.T) {
 	}
 	fakeTopic := "inventory_service_line"
 	fakeReadyQueue := fmt.Sprintf(DefaultReadyQueueNameFormatter, fakeTopic)
+
 	// 先清理环境
 	_, err := dq.redisCli.ExecCommand("DEL", fakeReadyQueue)
 	assert.Empty(t, err)
@@ -53,6 +54,10 @@ func TestReadyQueueCURD(t *testing.T) {
 		next++
 	}
 	assert.Equal(t, 3, next)
+
+	// 退出之前, 再次清理环境
+	_, err = dq.redisCli.ExecCommand("DEL", fakeReadyQueue)
+	assert.Empty(t, err)
 
 	redis.ReleaseInstance()
 }

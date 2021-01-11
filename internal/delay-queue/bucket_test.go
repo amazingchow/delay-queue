@@ -28,6 +28,7 @@ func TestBucketCURD(t *testing.T) {
 		redisCli: redis.GetOrCreateInstance(fakeRedisCfg),
 	}
 	fakeBucket := fmt.Sprintf(DefaultBucketNameFormatter, 1)
+
 	// 先清理环境
 	_, err := dq.redisCli.ExecCommand("DEL", fakeBucket)
 	assert.Empty(t, err)
@@ -57,6 +58,10 @@ func TestBucketCURD(t *testing.T) {
 		next++
 	}
 	assert.Equal(t, 3, next)
+
+	// 退出之前, 再次清理环境
+	_, err = dq.redisCli.ExecCommand("DEL", fakeBucket)
+	assert.Empty(t, err)
 
 	redis.ReleaseInstance()
 }

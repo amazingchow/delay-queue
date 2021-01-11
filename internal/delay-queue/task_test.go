@@ -47,7 +47,11 @@ func TestTaskCURD(t *testing.T) {
 		},
 	}
 	for _, task := range fakeTasks {
-		err := dq.putTask(task.Id, task)
+		// 先清理环境
+		_, err := dq.redisCli.ExecCommand("DEL", task.Id)
+		assert.Empty(t, err)
+
+		err = dq.putTask(task.Id, task)
 		assert.Empty(t, err)
 	}
 	for _, task := range fakeTasks {
@@ -61,6 +65,12 @@ func TestTaskCURD(t *testing.T) {
 		retTask, err = dq.getTask(task.Id)
 		assert.Empty(t, err)
 		assert.Empty(t, retTask)
+	}
+
+	// 退出之前, 再次清理环境
+	for _, task := range fakeTasks {
+		_, err := dq.redisCli.ExecCommand("DEL", task.Id)
+		assert.Empty(t, err)
 	}
 
 	redis.ReleaseInstance()
