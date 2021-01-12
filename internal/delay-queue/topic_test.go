@@ -12,15 +12,15 @@ import (
 
 func TestTopicCURD(t *testing.T) {
 	fakeRedisCfg := &conf.RedisService{
-		SentinelEndpoints:   []string{"localhost:26379", "localhost:26380", "localhost:26381"},
-		SentinelMasterName:  "mymaster",
-		SentinelPassword:    "Pwd123!@",
-		RedisMasterPassword: "sOmE_sEcUrE_pAsS",
-		RedisPoolMaxIdle:    3,
-		RedisPoolMaxActive:  64,
-		RedisConnectTimeout: 500,
-		RedisReadTimeout:    500,
-		RedisWriteTimeout:   500,
+		SentinelEndpoints:       []string{"localhost:26379", "localhost:26380", "localhost:26381"},
+		SentinelMasterName:      "mymaster",
+		SentinelPassword:        "Pwd123!@",
+		RedisMasterPassword:     "sOmE_sEcUrE_pAsS",
+		RedisPoolMaxIdleConns:   3,
+		RedisPoolMaxActiveConns: 64,
+		RedisConnectTimeoutMsec: 500,
+		RedisReadTimeoutMsec:    500,
+		RedisWriteTimeoutMsec:   500,
 	}
 
 	dq := &DelayQueue{
@@ -28,7 +28,7 @@ func TestTopicCURD(t *testing.T) {
 	}
 
 	// 先清理环境
-	_, err := dq.redisCli.ExecCommand("DEL", DefaultTopicSetName)
+	_, err := redis.ExecCommand(dq.redisCli, false, "DEL", DefaultTopicSetName)
 	assert.Empty(t, err)
 
 	fakeTopis := []string{
@@ -37,14 +37,14 @@ func TestTopicCURD(t *testing.T) {
 		"inventory_service_line",
 	}
 	for _, topic := range fakeTopis {
-		err := dq.putTopic(DefaultTopicSetName, topic)
+		err := dq.putTopic(DefaultTopicSetName, topic, true)
 		assert.Empty(t, err)
-		has, err := dq.hasTopic(DefaultTopicSetName, topic)
+		has, err := dq.hasTopic(DefaultTopicSetName, topic, true)
 		assert.Empty(t, err)
 		assert.Equal(t, true, has)
 	}
 
-	allTopics, err := dq.listTopic(DefaultTopicSetName)
+	allTopics, err := dq.listTopic(DefaultTopicSetName, true)
 	assert.Empty(t, err)
 	assert.Equal(t, len(fakeTopis), len(allTopics))
 	sort.Strings(fakeTopis)
@@ -54,15 +54,15 @@ func TestTopicCURD(t *testing.T) {
 	}
 
 	for _, topic := range fakeTopis {
-		err := dq.delTopic(DefaultTopicSetName, topic)
+		err := dq.delTopic(DefaultTopicSetName, topic, true)
 		assert.Empty(t, err)
-		has, err := dq.hasTopic(DefaultTopicSetName, topic)
+		has, err := dq.hasTopic(DefaultTopicSetName, topic, true)
 		assert.Empty(t, err)
 		assert.Equal(t, false, has)
 	}
 
 	// 退出之前, 再次清理环境
-	_, err = dq.redisCli.ExecCommand("DEL", DefaultTopicSetName)
+	_, err = redis.ExecCommand(dq.redisCli, false, "DEL", DefaultTopicSetName)
 	assert.Empty(t, err)
 
 	redis.ReleaseInstance()

@@ -11,20 +11,18 @@ import (
 
 func TestTaskCURD(t *testing.T) {
 	fakeRedisCfg := &conf.RedisService{
-		SentinelEndpoints:   []string{"localhost:26379", "localhost:26380", "localhost:26381"},
-		SentinelMasterName:  "mymaster",
-		SentinelPassword:    "Pwd123!@",
-		RedisMasterPassword: "sOmE_sEcUrE_pAsS",
-		RedisPoolMaxIdle:    3,
-		RedisPoolMaxActive:  64,
-		RedisConnectTimeout: 500,
-		RedisReadTimeout:    500,
-		RedisWriteTimeout:   500,
+		SentinelEndpoints:       []string{"localhost:26379", "localhost:26380", "localhost:26381"},
+		SentinelMasterName:      "mymaster",
+		SentinelPassword:        "Pwd123!@",
+		RedisMasterPassword:     "sOmE_sEcUrE_pAsS",
+		RedisPoolMaxIdleConns:   3,
+		RedisPoolMaxActiveConns: 64,
+		RedisConnectTimeoutMsec: 500,
+		RedisReadTimeoutMsec:    500,
+		RedisWriteTimeoutMsec:   500,
 	}
-
-	dq := &DelayQueue{
-		redisCli: redis.GetOrCreateInstance(fakeRedisCfg),
-	}
+	redisCli := redis.GetOrCreateInstance(fakeRedisCfg)
+	ctrl := NewTaskRWController()
 
 	fakeTasks := []*Task{
 		&Task{
@@ -48,28 +46,28 @@ func TestTaskCURD(t *testing.T) {
 	}
 	for _, task := range fakeTasks {
 		// 先清理环境
-		_, err := dq.redisCli.ExecCommand("DEL", task.Id)
+		_, err := redis.ExecCommand(redisCli, false, "DEL", task.Id)
 		assert.Empty(t, err)
 
-		err = dq.putTask(task.Id, task)
+		err = ctrl.PutTask(redisCli, task.Id, task, true)
 		assert.Empty(t, err)
 	}
 	for _, task := range fakeTasks {
-		retTask, err := dq.getTask(task.Id)
+		retTask, err := ctrl.GetTask(redisCli, task.Id, true)
 		assert.Empty(t, err)
 		assert.Equal(t, task.Topic, retTask.Topic)
 
-		err = dq.delTask(task.Id)
+		err = ctrl.DelTask(redisCli, task.Id, true)
 		assert.Empty(t, err)
 
-		retTask, err = dq.getTask(task.Id)
+		retTask, err = ctrl.GetTask(redisCli, task.Id, true)
 		assert.Empty(t, err)
 		assert.Empty(t, retTask)
 	}
 
 	// 退出之前, 再次清理环境
 	for _, task := range fakeTasks {
-		_, err := dq.redisCli.ExecCommand("DEL", task.Id)
+		_, err := redis.ExecCommand(redisCli, false, "DEL", task.Id)
 		assert.Empty(t, err)
 	}
 

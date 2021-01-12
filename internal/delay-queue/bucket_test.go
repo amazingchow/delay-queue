@@ -13,15 +13,15 @@ import (
 
 func TestBucketCURD(t *testing.T) {
 	fakeRedisCfg := &conf.RedisService{
-		SentinelEndpoints:   []string{"localhost:26379", "localhost:26380", "localhost:26381"},
-		SentinelMasterName:  "mymaster",
-		SentinelPassword:    "Pwd123!@",
-		RedisMasterPassword: "sOmE_sEcUrE_pAsS",
-		RedisPoolMaxIdle:    3,
-		RedisPoolMaxActive:  64,
-		RedisConnectTimeout: 500,
-		RedisReadTimeout:    500,
-		RedisWriteTimeout:   500,
+		SentinelEndpoints:       []string{"localhost:26379", "localhost:26380", "localhost:26381"},
+		SentinelMasterName:      "mymaster",
+		SentinelPassword:        "Pwd123!@",
+		RedisMasterPassword:     "sOmE_sEcUrE_pAsS",
+		RedisPoolMaxIdleConns:   3,
+		RedisPoolMaxActiveConns: 64,
+		RedisConnectTimeoutMsec: 500,
+		RedisReadTimeoutMsec:    500,
+		RedisWriteTimeoutMsec:   500,
 	}
 
 	dq := &DelayQueue{
@@ -30,7 +30,7 @@ func TestBucketCURD(t *testing.T) {
 	fakeBucket := fmt.Sprintf(DefaultBucketNameFormatter, 1)
 
 	// 先清理环境
-	_, err := dq.redisCli.ExecCommand("DEL", fakeBucket)
+	_, err := redis.ExecCommand(dq.redisCli, false, "DEL", fakeBucket)
 	assert.Empty(t, err)
 
 	fakeTaskIds := []string{
@@ -39,28 +39,28 @@ func TestBucketCURD(t *testing.T) {
 		"f58d644e-a2fc-44ce-851c-7530390cfce",
 	}
 	for _, taskId := range fakeTaskIds {
-		err = dq.pushToBucket(fakeBucket, time.Now().Unix(), taskId)
+		err = dq.pushToBucket(fakeBucket, time.Now().Unix(), taskId, true)
 		assert.Empty(t, err)
 		time.Sleep(time.Second)
 	}
 
 	next := 0
 	for {
-		item, err := dq.getFromBucket(fakeBucket)
+		item, err := dq.getOneFromBucket(fakeBucket, true)
 		assert.Empty(t, err)
 		if item == nil {
 			break
 		}
 		assert.Equal(t, fakeTaskIds[next], item.TaskId)
 
-		err = dq.delFromBucket(fakeBucket, item.TaskId)
+		err = dq.delFromBucket(fakeBucket, item.TaskId, true)
 		assert.Empty(t, err)
 		next++
 	}
 	assert.Equal(t, 3, next)
 
 	// 退出之前, 再次清理环境
-	_, err = dq.redisCli.ExecCommand("DEL", fakeBucket)
+	_, err = redis.ExecCommand(dq.redisCli, false, "DEL", fakeBucket)
 	assert.Empty(t, err)
 
 	redis.ReleaseInstance()

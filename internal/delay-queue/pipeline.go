@@ -21,39 +21,30 @@ type RedisRWResponse struct {
 type RedisRequestType int
 
 const (
-	TaskRequest       RedisRequestType = 1
-	TopicRequest      RedisRequestType = 2
-	BucketRequest     RedisRequestType = 3
-	ReadyQueueRequest RedisRequestType = 4
+	TopicRequest      RedisRequestType = 1
+	BucketRequest     RedisRequestType = 2
+	ReadyQueueRequest RedisRequestType = 3
 )
 
 type RedisRWRequestOp int
 
 const (
-	PutTaskRequest RedisRWRequestOp = 1
-	GetTaskRequest RedisRWRequestOp = 2
-	DelTaskRequest RedisRWRequestOp = 3
+	PutTopicRequest  RedisRWRequestOp = 1
+	ListTopicRequest RedisRWRequestOp = 2
+	HasTopicRequest  RedisRWRequestOp = 3
+	DelTopicRequest  RedisRWRequestOp = 4
 
-	PutTopicRequest  RedisRWRequestOp = 4
-	ListTopicRequest RedisRWRequestOp = 5
-	HasTopicRequest  RedisRWRequestOp = 6
-	DelTopicRequest  RedisRWRequestOp = 7
+	PushToBucketRequest     RedisRWRequestOp = 5
+	GetOneFromBucketRequest RedisRWRequestOp = 6
+	DelFromBucketRequest    RedisRWRequestOp = 7
 
-	PushToBucketRequest  RedisRWRequestOp = 8
-	GetFromBucketRequest RedisRWRequestOp = 9
-	DelFromBucketRequest RedisRWRequestOp = 10
-
-	PushToReadyQueueRequest       RedisRWRequestOp = 11
-	BlockPopFromReadyQueueRequest RedisRWRequestOp = 12
+	PushToReadyQueueRequest       RedisRWRequestOp = 8
+	BlockPopFromReadyQueueRequest RedisRWRequestOp = 9
 )
 
 // TODO: 设计更细粒度的并发控制, 仅针对单个key的操作做pipeline管理
 func (dq *DelayQueue) sendRedisRWRequest(req *RedisRWRequest) {
 	switch req.RequestType {
-	case TaskRequest:
-		{
-			dq.taskRWChannel <- req
-		}
 	case TopicRequest:
 		{
 			dq.topicRWChannel <- req
@@ -64,49 +55,11 @@ func (dq *DelayQueue) sendRedisRWRequest(req *RedisRWRequest) {
 		}
 	case ReadyQueueRequest:
 		{
-			dq.readyQueueRWChannel <- req
+			dq.readyQRWChannel <- req
 		}
 	default:
 		{
 			log.Error().Msgf("invalid RedisRequestType")
-		}
-	}
-}
-
-func (dq *DelayQueue) handleTaskRWRequest(ctx context.Context) {
-REDIS_RW_LOOP:
-	for {
-		select {
-		case <-ctx.Done():
-			{
-				break REDIS_RW_LOOP
-			}
-		case req := <-dq.taskRWChannel:
-			{
-				if req.RequestOp == PutTaskRequest {
-					err := dq.putTask(req.Inputs[0].(string), req.Inputs[1].(*Task))
-					req.ResponseCh <- &RedisRWResponse{
-						Err: err,
-					}
-				} else if req.RequestOp == GetTaskRequest {
-					v, err := dq.getTask(req.Inputs[0].(string))
-					if err != nil {
-						req.ResponseCh <- &RedisRWResponse{
-							Err: err,
-						}
-					} else {
-						req.ResponseCh <- &RedisRWResponse{
-							Outputs: []interface{}{v},
-							Err:     nil,
-						}
-					}
-				} else if req.RequestOp == DelTaskRequest {
-					err := dq.delTask(req.Inputs[0].(string))
-					req.ResponseCh <- &RedisRWResponse{
-						Err: err,
-					}
-				}
-			}
 		}
 	}
 }
@@ -122,12 +75,12 @@ REDIS_RW_LOOP:
 		case req := <-dq.topicRWChannel:
 			{
 				if req.RequestOp == PutTopicRequest {
-					err := dq.putTopic(req.Inputs[0].(string), req.Inputs[1].(string))
+					err := dq.putTopic(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}
 				} else if req.RequestOp == ListTopicRequest {
-					v, err := dq.listTopic(req.Inputs[0].(string))
+					v, err := dq.listTopic(req.Inputs[0].(string), req.Inputs[1].(bool))
 					if err != nil {
 						req.ResponseCh <- &RedisRWResponse{
 							Err: err,
@@ -139,7 +92,7 @@ REDIS_RW_LOOP:
 						}
 					}
 				} else if req.RequestOp == HasTopicRequest {
-					v, err := dq.hasTopic(req.Inputs[0].(string), req.Inputs[1].(string))
+					v, err := dq.hasTopic(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
 					if err != nil {
 						req.ResponseCh <- &RedisRWResponse{
 							Err: err,
@@ -151,7 +104,7 @@ REDIS_RW_LOOP:
 						}
 					}
 				} else if req.RequestOp == DelTopicRequest {
-					err := dq.delTopic(req.Inputs[0].(string), req.Inputs[1].(string))
+					err := dq.delTopic(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}
@@ -172,12 +125,12 @@ REDIS_RW_LOOP:
 		case req := <-dq.bucketRWChannel:
 			{
 				if req.RequestOp == PushToBucketRequest {
-					err := dq.pushToBucket(req.Inputs[0].(string), req.Inputs[1].(int64), req.Inputs[2].(string))
+					err := dq.pushToBucket(req.Inputs[0].(string), req.Inputs[1].(int64), req.Inputs[2].(string), req.Inputs[3].(bool))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}
-				} else if req.RequestOp == GetFromBucketRequest {
-					v, err := dq.getFromBucket(req.Inputs[0].(string))
+				} else if req.RequestOp == GetOneFromBucketRequest {
+					v, err := dq.getOneFromBucket(req.Inputs[0].(string), req.Inputs[1].(bool))
 					if err != nil {
 						req.ResponseCh <- &RedisRWResponse{
 							Err: err,
@@ -189,7 +142,7 @@ REDIS_RW_LOOP:
 						}
 					}
 				} else if req.RequestOp == DelFromBucketRequest {
-					err := dq.delFromBucket(req.Inputs[0].(string), req.Inputs[1].(string))
+					err := dq.delFromBucket(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}
@@ -207,15 +160,15 @@ REDIS_RW_LOOP:
 			{
 				break REDIS_RW_LOOP
 			}
-		case req := <-dq.readyQueueRWChannel:
+		case req := <-dq.readyQRWChannel:
 			{
 				if req.RequestOp == PushToReadyQueueRequest {
-					err := dq.pushToReadyQueue(req.Inputs[0].(string), req.Inputs[1].(string))
+					err := dq.pushToReadyQueue(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}
 				} else if req.RequestOp == BlockPopFromReadyQueueRequest {
-					v, err := dq.blockPopFromReadyQueue(req.Inputs[0].([]string), req.Inputs[1].(int))
+					v, err := dq.blockPopFromReadyQueue(req.Inputs[0].([]string), req.Inputs[1].(int), req.Inputs[2].(bool))
 					if err != nil {
 						req.ResponseCh <- &RedisRWResponse{
 							Err: err,

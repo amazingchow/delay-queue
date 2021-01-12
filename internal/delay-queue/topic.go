@@ -1,14 +1,24 @@
 package delayqueue
 
+import (
+	"github.com/amazingchow/photon-dance-delay-queue/internal/redis"
+)
+
+/*
+	key -> share the same default key "delay_queue_topic_set"
+
+	using SET
+*/
+
 // 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
-func (dq *DelayQueue) putTopic(key, topic string) error {
-	_, err := dq.redisCli.ExecCommand("SADD", key, topic)
+func (dq *DelayQueue) putTopic(key, topic string, debug bool) error {
+	_, err := redis.ExecCommand(dq.redisCli, debug, "SADD", key, topic)
 	return err
 }
 
 // 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
-func (dq *DelayQueue) listTopic(key string) ([]string, error) {
-	v, err := dq.redisCli.ExecCommand("SMEMBERS", key)
+func (dq *DelayQueue) listTopic(key string, debug bool) ([]string, error) {
+	v, err := redis.ExecCommand(dq.redisCli, debug, "SMEMBERS", key)
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +37,8 @@ func (dq *DelayQueue) listTopic(key string) ([]string, error) {
 }
 
 // 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
-func (dq *DelayQueue) hasTopic(key, topic string) (bool, error) {
-	v, err := dq.redisCli.ExecCommand("SISMEMBER", key, topic)
+func (dq *DelayQueue) hasTopic(key, topic string, debug bool) (bool, error) {
+	v, err := redis.ExecCommand(dq.redisCli, debug, "SISMEMBER", key, topic)
 	if err != nil {
 		return false, err
 	}
@@ -39,7 +49,7 @@ func (dq *DelayQueue) hasTopic(key, topic string) (bool, error) {
 }
 
 // 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
-func (dq *DelayQueue) delTopic(key, topic string) error {
-	_, err := dq.redisCli.ExecCommand("SREM", key, topic)
+func (dq *DelayQueue) delTopic(key, topic string, debug bool) error {
+	_, err := redis.ExecCommand(dq.redisCli, debug, "SREM", key, topic)
 	return err
 }

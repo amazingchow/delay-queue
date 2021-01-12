@@ -2,6 +2,8 @@ package redis
 
 import (
 	"errors"
+	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -11,15 +13,17 @@ import (
 	conf "github.com/amazingchow/photon-dance-delay-queue/internal/config"
 )
 
-type RedisPoolSingleton struct {
+type RedisConnPoolSingleton struct {
 	p *redis.Pool
 }
 
-var instance *RedisPoolSingleton
-var onceOpen sync.Once
-var onceClose sync.Once
+var (
+	instance  *RedisConnPoolSingleton
+	onceOpen  sync.Once
+	onceClose sync.Once
+)
 
-func GetOrCreateInstance(cfg *conf.RedisService) *RedisPoolSingleton {
+func GetOrCreateInstance(cfg *conf.RedisService) *RedisConnPoolSingleton {
 	onceOpen.Do(func() {
 		sntnl := &sentinel.Sentinel{
 			Addrs:      cfg.SentinelEndpoints,
@@ -28,9 +32,9 @@ func GetOrCreateInstance(cfg *conf.RedisService) *RedisPoolSingleton {
 				conn, err := redis.Dial(
 					"tcp",
 					addr,
-					redis.DialConnectTimeout(time.Duration(cfg.RedisConnectTimeout)*time.Millisecond),
-					redis.DialReadTimeout(time.Duration(cfg.RedisReadTimeout)*time.Millisecond),
-					redis.DialWriteTimeout(time.Duration(cfg.RedisWriteTimeout)*time.Millisecond),
+					redis.DialConnectTimeout(time.Duration(cfg.RedisConnectTimeoutMsec)*time.Millisecond),
+					redis.DialReadTimeout(time.Duration(cfg.RedisReadTimeoutMsec)*time.Millisecond),
+					redis.DialWriteTimeout(time.Duration(cfg.RedisWriteTimeoutMsec)*time.Millisecond),
 					redis.DialPassword(cfg.SentinelPassword),
 				)
 				if err != nil {
@@ -39,16 +43,16 @@ func GetOrCreateInstance(cfg *conf.RedisService) *RedisPoolSingleton {
 				return conn, nil
 			},
 		}
-		instance = &RedisPoolSingleton{}
+		instance = &RedisConnPoolSingleton{}
 		instance.p = &redis.Pool{
 			Dial: func() (redis.Conn, error) {
-				addr, err := sntnl.MasterAddr()
+				master, err := sntnl.MasterAddr()
 				if err != nil {
 					return nil, err
 				}
 				conn, err := redis.Dial(
 					"tcp",
-					addr,
+					master,
 					redis.DialPassword(cfg.RedisMasterPassword),
 				)
 				if err != nil {
@@ -63,9 +67,9 @@ func GetOrCreateInstance(cfg *conf.RedisService) *RedisPoolSingleton {
 					return nil
 				}
 			},
-			MaxIdle:     cfg.RedisPoolMaxIdle,
-			MaxActive:   cfg.RedisPoolMaxActive,
-			IdleTimeout: 240 * time.Second,
+			MaxIdle:     cfg.RedisPoolMaxIdleConns,
+			MaxActive:   cfg.RedisPoolMaxActiveConns,
+			IdleTimeout: time.Duration(cfg.RedisPoolIdleConnTimeoutSec) * time.Second,
 			Wait:        true,
 		}
 	})
@@ -80,9 +84,12 @@ func ReleaseInstance() {
 	})
 }
 
-// ExecCommand 执行redis命令, 执行完成后连接自动放回连接池.
-func (inst *RedisPoolSingleton) ExecCommand(cmd string, args ...interface{}) (interface{}, error) {
-	redis := inst.p.Get()
-	defer redis.Close()
-	return redis.Do(cmd, args...)
+// ExecCommand 执行redis命令, 完成后自动归还连接.
+func ExecCommand(inst *RedisConnPoolSingleton, debug bool, cmd string, args ...interface{}) (interface{}, error) {
+	conn := inst.p.Get()
+	if debug {
+		conn = redis.NewLoggingConn(conn, log.New(os.Stderr, "", 0), "redigo")
+	}
+	defer conn.Close()
+	return conn.Do(cmd, args...)
 }
