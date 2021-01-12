@@ -18,7 +18,7 @@ type DelayQueue struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	taskRWChannel       chan *RedisRWRequest
+	taskRWController    *TaskRWController
 	topicRWChannel      chan *RedisRWRequest
 	bucketRWChannel     chan *RedisRWRequest
 	readyQueueRWChannel chan *RedisRWRequest
@@ -35,7 +35,7 @@ func NewDelayQueue(cfg *conf.DelayQueueService) *DelayQueue {
 		ctx:    ctx,
 		cancel: cancel,
 
-		taskRWChannel:       make(chan *RedisRWRequest, 1024),
+		taskRWController:    NewTaskRWController(),
 		topicRWChannel:      make(chan *RedisRWRequest, 1024),
 		bucketRWChannel:     make(chan *RedisRWRequest, 1024),
 		readyQueueRWChannel: make(chan *RedisRWRequest, 1024),
@@ -45,7 +45,6 @@ func NewDelayQueue(cfg *conf.DelayQueueService) *DelayQueue {
 
 		producer: kafka.NewProducer(cfg.KafkaService),
 	}
-	go dq.handleTaskRWRequest(ctx)
 	go dq.handleTopicRWRequest(ctx)
 	go dq.handleBucketRWRequest(ctx)
 	go dq.handleReadyQueueRWRequest(ctx)
@@ -90,30 +89,22 @@ func spawnBuckets(ctx context.Context) <-chan string {
 
 func (dq *DelayQueue) Push(task *Task) error {
 	/* start to add task */
-	resp := make(chan *RedisRWResponse)
-	req := &RedisRWRequest{
-		RequestType: TaskRequest,
-		RequestOp:   PutTaskRequest,
-		Inputs:      []interface{}{task.Id, task},
-		ResponseCh:  resp,
-	}
-	dq.sendRedisRWRequest(req)
-	outs := <-resp
-	if outs.Err != nil {
-		log.Error().Err(outs.Err).Msgf("failed to add task <id: %s>", task.Id)
-		return outs.Err
+	err := dq.taskRWController.PutTask(dq.redisCli, task.Id, task, false)
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to add task <id: %s>", task.Id)
+		return err
 	}
 
 	/* start to push task into bucket */
-	resp = make(chan *RedisRWResponse)
-	req = &RedisRWRequest{
+	resp := make(chan *RedisRWResponse)
+	req := &RedisRWRequest{
 		RequestType: BucketRequest,
 		RequestOp:   PushToBucketRequest,
 		Inputs:      []interface{}{<-dq.bucketCh, task.Delay, task.Id},
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
-	outs = <-resp
+	outs := <-resp
 	if outs.Err != nil {
 		log.Error().Err(outs.Err).Msgf("failed to add task <id: %s> into bucket", task.Id)
 		return outs.Err
@@ -124,18 +115,10 @@ func (dq *DelayQueue) Push(task *Task) error {
 
 func (dq *DelayQueue) Remove(taskId string) error {
 	/* start to delete task */
-	resp := make(chan *RedisRWResponse)
-	req := &RedisRWRequest{
-		RequestType: TaskRequest,
-		RequestOp:   DelTaskRequest,
-		Inputs:      []interface{}{taskId},
-		ResponseCh:  resp,
-	}
-	dq.sendRedisRWRequest(req)
-	outs := <-resp
-	if outs.Err != nil {
-		log.Error().Err(outs.Err).Msgf("failed to remove task <id: %s>", taskId)
-		return outs.Err
+	err := dq.taskRWController.DelTask(dq.redisCli, taskId, false)
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to remove task <id: %s>", taskId)
+		return err
 	}
 	log.Debug().Msgf("delete a task <%s>", taskId)
 	return nil
@@ -143,20 +126,11 @@ func (dq *DelayQueue) Remove(taskId string) error {
 
 func (dq *DelayQueue) Get(taskId string) (*Task, error) {
 	/* start to get task */
-	resp := make(chan *RedisRWResponse)
-	req := &RedisRWRequest{
-		RequestType: TaskRequest,
-		RequestOp:   GetTaskRequest,
-		Inputs:      []interface{}{taskId},
-		ResponseCh:  resp,
+	task, err := dq.taskRWController.GetTask(dq.redisCli, taskId, false)
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to get task <id: %s>", taskId)
+		return nil, err
 	}
-	dq.sendRedisRWRequest(req)
-	outs := <-resp
-	if outs.Err != nil {
-		log.Error().Err(outs.Err).Msgf("failed to get task <id: %s>", taskId)
-		return nil, outs.Err
-	}
-	task := outs.Outputs[0].(*Task)
 	// 任务不存在, 可能已被删除
 	if task == nil {
 		return nil, nil
@@ -250,20 +224,11 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 
 		// 延迟执行时间小于等于当前时间, 取出任务并放入ReadyQueue
 		/* start to get task */
-		resp = make(chan *RedisRWResponse)
-		req = &RedisRWRequest{
-			RequestType: TaskRequest,
-			RequestOp:   GetTaskRequest,
-			Inputs:      []interface{}{bucketItem.TaskId},
-			ResponseCh:  resp,
-		}
-		dq.sendRedisRWRequest(req)
-		outs = <-resp
-		if outs.Err != nil {
-			log.Error().Err(outs.Err).Msgf("failed to get task <id: %s>", bucketItem.TaskId)
+		task, err := dq.taskRWController.GetTask(dq.redisCli, bucketItem.TaskId, false)
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to get task <id: %s>", bucketItem.TaskId)
 			continue
 		}
-		task := outs.Outputs[0].(*Task)
 		// 任务不存在, 可能已被删除, 马上从bucket中删除
 		if task == nil {
 			/* start to delete task from bucket */
@@ -396,20 +361,11 @@ POLL_LOOP:
 				log.Debug().Msgf("get ready task <%s>", taskId)
 
 				/* start to get task */
-				resp = make(chan *RedisRWResponse)
-				req = &RedisRWRequest{
-					RequestType: TaskRequest,
-					RequestOp:   GetTaskRequest,
-					Inputs:      []interface{}{taskId},
-					ResponseCh:  resp,
-				}
-				dq.sendRedisRWRequest(req)
-				outs = <-resp
-				if outs.Err != nil {
-					log.Error().Err(outs.Err).Msgf("failed to get task <id: %s>", taskId)
+				task, err := dq.taskRWController.GetTask(dq.redisCli, taskId, false)
+				if err != nil {
+					log.Error().Err(err).Msgf("failed to get task <id: %s>", taskId)
 					continue
 				}
-				task := outs.Outputs[0].(*Task)
 				// 任务不存在, 可能已被删除
 				if task == nil {
 					continue
