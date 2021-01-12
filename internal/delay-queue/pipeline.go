@@ -34,9 +34,9 @@ const (
 	HasTopicRequest  RedisRWRequestOp = 3
 	DelTopicRequest  RedisRWRequestOp = 4
 
-	PushToBucketRequest  RedisRWRequestOp = 5
-	GetFromBucketRequest RedisRWRequestOp = 6
-	DelFromBucketRequest RedisRWRequestOp = 7
+	PushToBucketRequest     RedisRWRequestOp = 5
+	GetOneFromBucketRequest RedisRWRequestOp = 6
+	DelFromBucketRequest    RedisRWRequestOp = 7
 
 	PushToReadyQueueRequest       RedisRWRequestOp = 8
 	BlockPopFromReadyQueueRequest RedisRWRequestOp = 9
@@ -125,12 +125,12 @@ REDIS_RW_LOOP:
 		case req := <-dq.bucketRWChannel:
 			{
 				if req.RequestOp == PushToBucketRequest {
-					err := dq.pushToBucket(req.Inputs[0].(string), req.Inputs[1].(int64), req.Inputs[2].(string))
+					err := dq.pushToBucket(req.Inputs[0].(string), req.Inputs[1].(int64), req.Inputs[2].(string), req.Inputs[3].(bool))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}
-				} else if req.RequestOp == GetFromBucketRequest {
-					v, err := dq.getFromBucket(req.Inputs[0].(string))
+				} else if req.RequestOp == GetOneFromBucketRequest {
+					v, err := dq.getOneFromBucket(req.Inputs[0].(string), req.Inputs[1].(bool))
 					if err != nil {
 						req.ResponseCh <- &RedisRWResponse{
 							Err: err,
@@ -142,7 +142,7 @@ REDIS_RW_LOOP:
 						}
 					}
 				} else if req.RequestOp == DelFromBucketRequest {
-					err := dq.delFromBucket(req.Inputs[0].(string), req.Inputs[1].(string))
+					err := dq.delFromBucket(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}

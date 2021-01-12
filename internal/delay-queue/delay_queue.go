@@ -100,7 +100,7 @@ func (dq *DelayQueue) Push(task *Task) error {
 	req := &RedisRWRequest{
 		RequestType: BucketRequest,
 		RequestOp:   PushToBucketRequest,
-		Inputs:      []interface{}{<-dq.bucketCh, task.Delay, task.Id},
+		Inputs:      []interface{}{<-dq.bucketCh, task.Delay, task.Id, false},
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
@@ -203,8 +203,8 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 		resp := make(chan *RedisRWResponse)
 		req := &RedisRWRequest{
 			RequestType: BucketRequest,
-			RequestOp:   GetFromBucketRequest,
-			Inputs:      []interface{}{bucket},
+			RequestOp:   GetOneFromBucketRequest,
+			Inputs:      []interface{}{bucket, false},
 			ResponseCh:  resp,
 		}
 		dq.sendRedisRWRequest(req)
@@ -236,7 +236,7 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 			req := &RedisRWRequest{
 				RequestType: BucketRequest,
 				RequestOp:   DelFromBucketRequest,
-				Inputs:      []interface{}{bucket, bucketItem.TaskId},
+				Inputs:      []interface{}{bucket, bucketItem.TaskId, false},
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
@@ -268,7 +268,7 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 			req = &RedisRWRequest{
 				RequestType: BucketRequest,
 				RequestOp:   DelFromBucketRequest,
-				Inputs:      []interface{}{bucket, task.Id},
+				Inputs:      []interface{}{bucket, task.Id, false},
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
@@ -282,7 +282,7 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 			req := &RedisRWRequest{
 				RequestType: BucketRequest,
 				RequestOp:   DelFromBucketRequest,
-				Inputs:      []interface{}{bucket, task.Id},
+				Inputs:      []interface{}{bucket, task.Id, false},
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
@@ -298,7 +298,7 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 			req = &RedisRWRequest{
 				RequestType: BucketRequest,
 				RequestOp:   PushToBucketRequest,
-				Inputs:      []interface{}{<-dq.bucketCh, task.Delay, task.Id},
+				Inputs:      []interface{}{<-dq.bucketCh, task.Delay, task.Id, false},
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
@@ -380,7 +380,7 @@ POLL_LOOP:
 				req = &RedisRWRequest{
 					RequestType: BucketRequest,
 					RequestOp:   PushToBucketRequest,
-					Inputs:      []interface{}{<-dq.bucketCh, timestamp, task.Id},
+					Inputs:      []interface{}{<-dq.bucketCh, timestamp, task.Id, false},
 					ResponseCh:  resp,
 				}
 				dq.sendRedisRWRequest(req)

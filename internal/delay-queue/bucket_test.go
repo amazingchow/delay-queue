@@ -39,21 +39,21 @@ func TestBucketCURD(t *testing.T) {
 		"f58d644e-a2fc-44ce-851c-7530390cfce",
 	}
 	for _, taskId := range fakeTaskIds {
-		err = dq.pushToBucket(fakeBucket, time.Now().Unix(), taskId)
+		err = dq.pushToBucket(fakeBucket, time.Now().Unix(), taskId, true)
 		assert.Empty(t, err)
 		time.Sleep(time.Second)
 	}
 
 	next := 0
 	for {
-		item, err := dq.getFromBucket(fakeBucket)
+		item, err := dq.getOneFromBucket(fakeBucket, true)
 		assert.Empty(t, err)
 		if item == nil {
 			break
 		}
 		assert.Equal(t, fakeTaskIds[next], item.TaskId)
 
-		err = dq.delFromBucket(fakeBucket, item.TaskId)
+		err = dq.delFromBucket(fakeBucket, item.TaskId, true)
 		assert.Empty(t, err)
 		next++
 	}
