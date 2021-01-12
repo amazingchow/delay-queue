@@ -19,7 +19,7 @@ var instance *RedisPoolSingleton
 var onceOpen sync.Once
 var onceClose sync.Once
 
-func GetOrCreateInstance(cfg *conf.Redis) *RedisPoolSingleton {
+func GetOrCreateInstance(cfg *conf.RedisService) *RedisPoolSingleton {
 	onceOpen.Do(func() {
 		sntnl := &sentinel.Sentinel{
 			Addrs:      cfg.SentinelEndpoints,

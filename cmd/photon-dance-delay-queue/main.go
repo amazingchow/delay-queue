@@ -50,7 +50,7 @@ func main() {
 	}
 
 	// 加载节点配置
-	var cfg conf.DelayQueue
+	var cfg conf.DelayQueueService
 	util.LoadConfigFileOrPanic(*cfgPathFlag, &cfg)
 
 	ctx, cancel := context.WithCancel(context.Background())

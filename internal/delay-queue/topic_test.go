@@ -11,7 +11,7 @@ import (
 )
 
 func TestTopicCURD(t *testing.T) {
-	fakeRedisCfg := &conf.Redis{
+	fakeRedisCfg := &conf.RedisService{
 		SentinelEndpoints:   []string{"localhost:26379", "localhost:26380", "localhost:26381"},
 		SentinelMasterName:  "mymaster",
 		SentinelPassword:    "Pwd123!@",

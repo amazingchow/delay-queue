@@ -17,7 +17,7 @@ type taskDelayQueueServiceServer struct {
 	dq *delayqueue.DelayQueue
 }
 
-func newTaskDelayQueueServiceServer(cfg *conf.DelayQueue) *taskDelayQueueServiceServer {
+func newTaskDelayQueueServiceServer(cfg *conf.DelayQueueService) *taskDelayQueueServiceServer {
 	return &taskDelayQueueServiceServer{
 		dq: delayqueue.NewDelayQueue(cfg),
 	}

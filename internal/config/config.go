@@ -1,12 +1,12 @@
 package config
 
-type DelayQueue struct {
-	GRPCEndpoint string `json:"grpc_endpoint"` // grpc服务地址
-	RedisBackend *Redis `json:"redis_backend"`
-	KafkaBackend *Kafka `json:"kafka_backend"`
+type DelayQueueService struct {
+	GRPCEndpoint string        `json:"grpc_endpoint"` // grpc服务地址
+	RedisService *RedisService `json:"redis_backend"`
+	KafkaService *KafkaService `json:"kafka_backend"`
 }
 
-type Redis struct {
+type RedisService struct {
 	SentinelEndpoints   []string `json:"sentinel_endpoints"`
 	SentinelMasterName  string   `json:"sentinel_master_name"`
 	SentinelPassword    string   `json:"sentinel_password"`
@@ -18,6 +18,6 @@ type Redis struct {
 	RedisWriteTimeout   int      `json:"redis_write_timeout"`   // 写入超时, 单位毫秒
 }
 
-type Kafka struct {
+type KafkaService struct {
 	KafkaBrokers []string `json:"kafka_brokers"`
 }

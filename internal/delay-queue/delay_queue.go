@@ -29,7 +29,7 @@ type DelayQueue struct {
 	producer *kafka.Producer
 }
 
-func NewDelayQueue(cfg *conf.DelayQueue) *DelayQueue {
+func NewDelayQueue(cfg *conf.DelayQueueService) *DelayQueue {
 	ctx, cancel := context.WithCancel(context.Background())
 	dq := &DelayQueue{
 		ctx:    ctx,
@@ -41,9 +41,9 @@ func NewDelayQueue(cfg *conf.DelayQueue) *DelayQueue {
 		readyQueueRWChannel: make(chan *RedisRWRequest, 1024),
 
 		bucketCh: spawnBuckets(ctx),
-		redisCli: redis.GetOrCreateInstance(cfg.RedisBackend),
+		redisCli: redis.GetOrCreateInstance(cfg.RedisService),
 
-		producer: kafka.NewProducer(cfg.KafkaBackend),
+		producer: kafka.NewProducer(cfg.KafkaService),
 	}
 	go dq.handleTaskRWRequest(ctx)
 	go dq.handleTopicRWRequest(ctx)
