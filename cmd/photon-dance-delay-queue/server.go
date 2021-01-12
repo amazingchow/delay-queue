@@ -12,68 +12,74 @@ import (
 	delayqueue "github.com/amazingchow/photon-dance-delay-queue/internal/delay-queue"
 )
 
-type taskDelayQueueServiceServer struct {
+type TaskDelayQueueServiceServer struct {
 	pb.UnimplementedTaskDelayQueueServiceServer
-	dq *delayqueue.DelayQueue
+	inst *delayqueue.DelayQueue
 }
 
-func newTaskDelayQueueServiceServer(cfg *conf.DelayQueue) *taskDelayQueueServiceServer {
-	return &taskDelayQueueServiceServer{
-		dq: delayqueue.NewDelayQueue(cfg),
+func NewTaskDelayQueueServiceServer(cfg *conf.DelayQueueService) *TaskDelayQueueServiceServer {
+	return &TaskDelayQueueServiceServer{
+		inst: delayqueue.NewDelayQueue(cfg),
 	}
 }
 
-func (srv *taskDelayQueueServiceServer) close() {
-	srv.dq.Close()
+func (srv *TaskDelayQueueServiceServer) Close() {
+	srv.inst.Close()
 }
 
-func (srv *taskDelayQueueServiceServer) PushTask(ctx context.Context, req *pb.PushTaskRequest) (*pb.PushTaskResponse, error) {
-	if req.GetTask().GetId() == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "empty task id")
-	}
-	if req.GetTask().GetAttachedTopic() == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "empty attached topic")
-	}
-	if req.GetTask().GetDelay() <= 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid task delay")
-	}
-	if req.GetTask().GetTtr() <= 0 || req.GetTask().GetTtr() > 86400 {
-		return nil, status.Errorf(codes.InvalidArgument, "empty attached topic")
+func (srv *TaskDelayQueueServiceServer) PushTask(ctx context.Context, req *pb.PushTaskRequest) (*pb.PushTaskResponse, error) {
+	if err := PushTaskPreCheck(req); err != nil {
+		return nil, err
 	}
 
 	task := &delayqueue.Task{}
 	task.Id = req.GetTask().GetId()
 	task.Topic = req.GetTask().GetAttachedTopic()
-	task.Delay = time.Now().Unix() + int64(req.GetTask().GetDelay())
+	task.Delay = time.Now().Unix() + int64(req.GetTask().GetDelay()) // 当前时间戳 + 相对时间 = 绝对时间
 	task.TTR = int64(req.GetTask().GetTtr())
 	task.Blob = req.GetTask().GetPayload()
-	if err := srv.dq.Push(task); err != nil {
+
+	if err := srv.inst.Push(task); err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	if IsContextDone(ctx) {
+		return nil, status.Errorf(codes.DeadlineExceeded, "system may be under busy")
+	}
+
 	return &pb.PushTaskResponse{}, nil
 }
 
-func (srv *taskDelayQueueServiceServer) FinishTask(ctx context.Context, req *pb.FinishTaskRequest) (*pb.FinishTaskResponse, error) {
-	if req.GetTaskId() == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "empty task id")
+func (srv *TaskDelayQueueServiceServer) FinishTask(ctx context.Context, req *pb.FinishTaskRequest) (*pb.FinishTaskResponse, error) {
+	if err := FinishTaskPreCheck(req); err != nil {
+		return nil, err
 	}
-	if err := srv.dq.Remove(req.GetTaskId()); err != nil {
+
+	if err := srv.inst.Remove(req.GetTaskId()); err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	if IsContextDone(ctx) {
+		return nil, status.Errorf(codes.DeadlineExceeded, "system may be under busy")
+	}
+
 	return &pb.FinishTaskResponse{}, nil
 }
 
-func (srv *taskDelayQueueServiceServer) CheckTask(ctx context.Context, req *pb.CheckTaskRequest) (*pb.CheckTaskResponse, error) {
-	if req.GetTaskId() == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "empty task id")
+func (srv *TaskDelayQueueServiceServer) CheckTask(ctx context.Context, req *pb.CheckTaskRequest) (*pb.CheckTaskResponse, error) {
+	if err := CheckTaskPreCheck(req); err != nil {
+		return nil, err
 	}
-	task, err := srv.dq.Get(req.GetTaskId())
+
+	task, err := srv.inst.Get(req.GetTaskId())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+	if IsContextDone(ctx) {
+		return nil, status.Errorf(codes.DeadlineExceeded, "system may be under busy")
 	}
 	if task == nil {
 		return &pb.CheckTaskResponse{}, nil
 	}
+
 	return &pb.CheckTaskResponse{
 		Task: &pb.Task{
 			Id:            task.Id,
@@ -84,22 +90,32 @@ func (srv *taskDelayQueueServiceServer) CheckTask(ctx context.Context, req *pb.C
 	}, nil
 }
 
-func (srv *taskDelayQueueServiceServer) SubscribeTopic(ctx context.Context, req *pb.SubscribeTopicRequest) (*pb.SubscribeTopicResponse, error) {
-	if req.GetTopic() == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "empty topic")
+func (srv *TaskDelayQueueServiceServer) SubscribeTopic(ctx context.Context, req *pb.SubscribeTopicRequest) (*pb.SubscribeTopicResponse, error) {
+	if err := SubscribeTopicPreCheck(req); err != nil {
+		return nil, err
 	}
-	if err := srv.dq.PushTopic(req.GetTopic()); err != nil {
+
+	if err := srv.inst.PushTopic(req.GetTopic()); err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	if IsContextDone(ctx) {
+		return nil, status.Errorf(codes.DeadlineExceeded, "system may be under busy")
+	}
+
 	return &pb.SubscribeTopicResponse{}, nil
 }
 
-func (srv *taskDelayQueueServiceServer) UnsubscribeTopic(ctx context.Context, req *pb.UnsubscribeTopicRequest) (*pb.UnsubscribeTopicResponse, error) {
-	if req.GetTopic() == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "empty topic")
+func (srv *TaskDelayQueueServiceServer) UnsubscribeTopic(ctx context.Context, req *pb.UnsubscribeTopicRequest) (*pb.UnsubscribeTopicResponse, error) {
+	if err := UnsubscribeTopicPreCheck(req); err != nil {
+		return nil, err
 	}
-	if err := srv.dq.RemoveTopic(req.GetTopic()); err != nil {
+
+	if err := srv.inst.RemoveTopic(req.GetTopic()); err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	if IsContextDone(ctx) {
+		return nil, status.Errorf(codes.DeadlineExceeded, "system may be under busy")
+	}
+
 	return &pb.UnsubscribeTopicResponse{}, nil
 }

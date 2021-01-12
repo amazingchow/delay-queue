@@ -14,10 +14,10 @@ func loadConfigFile(cfgPath string, ptr interface{}) error {
 	}
 	data, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
-		return fmt.Errorf("failed to open file %s, err: %v", cfgPath, err)
+		return fmt.Errorf("failed to open config %s, err: %v", cfgPath, err)
 	}
 	if err := json.Unmarshal(data, ptr); err != nil {
-		return fmt.Errorf("failed to unmarshal file %s, err: %v", cfgPath, err)
+		return fmt.Errorf("failed to unmarshal config %s, err: %v", cfgPath, err)
 	}
 	return nil
 }

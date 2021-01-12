@@ -13,7 +13,7 @@ type Producer struct {
 	producer sarama.AsyncProducer
 }
 
-func newKafkaConfig(cfg *conf.Kafka) *sarama.Config {
+func newKafkaConfig(cfg *conf.KafkaService) *sarama.Config {
 	conf := sarama.NewConfig()
 	getKafkaAccessEnv(conf)
 	return conf
@@ -33,7 +33,7 @@ func getKafkaAccessEnv(cfg *sarama.Config) {
 	cfg.Net.SASL.Version = sarama.SASLHandshakeV1
 }
 
-func NewProducer(cfg *conf.Kafka) *Producer {
+func NewProducer(cfg *conf.KafkaService) *Producer {
 	producer, err := sarama.NewAsyncProducer(cfg.KafkaBrokers, newKafkaConfig(cfg))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create kafka producer")
