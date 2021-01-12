@@ -162,11 +162,11 @@ func (dq *DelayQueue) RemoveTopic(topic string) error {
 
 func (dq *DelayQueue) startAllTimers(ctx context.Context) {
 	for i := 0; i < DefaultBucketCnt; i++ {
-		go dq.handleTimer(ctx, fmt.Sprintf(DefaultBucketNameFormatter, i))
+		go dq.handleSingleTimer(ctx, fmt.Sprintf(DefaultBucketNameFormatter, i))
 	}
 }
 
-func (dq *DelayQueue) handleTimer(ctx context.Context, bucket string) {
+func (dq *DelayQueue) handleSingleTimer(ctx context.Context, bucket string) {
 	timer := time.NewTicker(1 * time.Second)
 TICK_LOOP:
 	for {
@@ -177,13 +177,13 @@ TICK_LOOP:
 			}
 		case t := <-timer.C:
 			{
-				dq.timerHandler(t, bucket)
+				dq.timerHandler(t.Unix(), bucket)
 			}
 		}
 	}
 }
 
-func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
+func (dq *DelayQueue) timerHandler(now int64, bucket string) {
 	for {
 		/* start to get task from bucket */
 		resp := make(chan *RedisRWResponse)
@@ -203,8 +203,9 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 		if bucketItem == nil {
 			return
 		}
+
 		// 延迟执行时间未到
-		if bucketItem.TaskTimestamp > t.Unix() {
+		if bucketItem.TaskTimestamp > now {
 			return
 		}
 
@@ -218,7 +219,7 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 		// 任务不存在, 可能已被删除, 马上从bucket中删除
 		if task == nil {
 			/* start to delete task from bucket */
-			resp := make(chan *RedisRWResponse)
+			resp := make(chan *RedisRWResponse, 1)
 			req := &RedisRWRequest{
 				RequestType: BucketRequest,
 				RequestOp:   DelFromBucketRequest,
@@ -226,16 +227,12 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
-			outs := <-resp
-			if outs.Err != nil {
-				log.Error().Err(outs.Err).Msgf("failed to remove task <id: %s> from bucket", bucketItem.TaskId)
-			}
 			continue
 		}
 		// 再次确认任务延迟执行时间是否小于等于当前时间
-		if task.Delay <= t.Unix() {
+		if task.Delay <= now {
 			/* start to push task into ready queue */
-			resp := make(chan *RedisRWResponse)
+			resp := make(chan *RedisRWResponse, 1)
 			req := &RedisRWRequest{
 				RequestType: ReadyQueueRequest,
 				RequestOp:   PushToReadyQueueRequest,
@@ -243,14 +240,9 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
-			outs := <-resp
-			if outs.Err != nil {
-				log.Error().Err(outs.Err).Msgf("failed to add task <id: %s> into ready queue", task.Id)
-				continue
-			}
 
 			/* start to delete task from bucket */
-			resp = make(chan *RedisRWResponse)
+			resp = make(chan *RedisRWResponse, 1)
 			req = &RedisRWRequest{
 				RequestType: BucketRequest,
 				RequestOp:   DelFromBucketRequest,
@@ -258,40 +250,6 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
-			outs = <-resp
-			if outs.Err != nil {
-				log.Error().Err(outs.Err).Msgf("failed to remove task <id: %s> from bucket", task.Id)
-			}
-		} else {
-			/* start to delete task from bucket */
-			resp := make(chan *RedisRWResponse)
-			req := &RedisRWRequest{
-				RequestType: BucketRequest,
-				RequestOp:   DelFromBucketRequest,
-				Inputs:      []interface{}{bucket, task.Id, false},
-				ResponseCh:  resp,
-			}
-			dq.sendRedisRWRequest(req)
-			outs := <-resp
-			if outs.Err != nil {
-				log.Error().Err(outs.Err).Msgf("failed to remove task <id: %s> from bucket", task.Id)
-				continue
-			}
-
-			// 重新放入bucket中
-			/* start to push task into bucket */
-			resp = make(chan *RedisRWResponse)
-			req = &RedisRWRequest{
-				RequestType: BucketRequest,
-				RequestOp:   PushToBucketRequest,
-				Inputs:      []interface{}{<-dq.bucketCh, task.Delay, task.Id, false},
-				ResponseCh:  resp,
-			}
-			dq.sendRedisRWRequest(req)
-			outs = <-resp
-			if outs.Err != nil {
-				log.Error().Err(outs.Err).Msgf("failed to add task <id: %s> into bucket", task.Id)
-			}
 		}
 	}
 }
