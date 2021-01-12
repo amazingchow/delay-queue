@@ -55,13 +55,11 @@ func main() {
 
 	// 生成全局上下文控制器
 	gctx, gcancel := context.WithCancel(context.Background())
+
+	srv := NewTaskDelayQueueServiceServer(&cfg)
 	defer func() {
 		gcancel()
-	}()
-
-	srv := newTaskDelayQueueServiceServer(&cfg)
-	defer func() {
-		srv.close()
+		srv.Close()
 	}()
 
 	// 开启grpc服务
@@ -73,5 +71,5 @@ func main() {
 		break
 	}
 
-	log.Info().Msg("stop task delay-queue service")
+	log.Info().Msg("task-delay-queue-service has been stopped")
 }

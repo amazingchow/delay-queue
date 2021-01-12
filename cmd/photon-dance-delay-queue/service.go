@@ -13,7 +13,7 @@ import (
 	pb "github.com/amazingchow/photon-dance-delay-queue/api"
 )
 
-func serveGPRC(ctx context.Context, srv *taskDelayQueueServiceServer, ep string) {
+func serveGPRC(ctx context.Context, srv *TaskDelayQueueServiceServer, ep string) {
 	l, err := net.Listen("tcp", ep)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to start task-delay-queue-grpc-service")
