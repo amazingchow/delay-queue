@@ -163,12 +163,12 @@ REDIS_RW_LOOP:
 		case req := <-dq.readyQueueRWChannel:
 			{
 				if req.RequestOp == PushToReadyQueueRequest {
-					err := dq.pushToReadyQueue(req.Inputs[0].(string), req.Inputs[1].(string))
+					err := dq.pushToReadyQueue(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}
 				} else if req.RequestOp == BlockPopFromReadyQueueRequest {
-					v, err := dq.blockPopFromReadyQueue(req.Inputs[0].([]string), req.Inputs[1].(int))
+					v, err := dq.blockPopFromReadyQueue(req.Inputs[0].([]string), req.Inputs[1].(int), req.Inputs[2].(bool))
 					if err != nil {
 						req.ResponseCh <- &RedisRWResponse{
 							Err: err,

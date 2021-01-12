@@ -253,7 +253,7 @@ func (dq *DelayQueue) timerHandler(t time.Time, bucket string) {
 			req := &RedisRWRequest{
 				RequestType: ReadyQueueRequest,
 				RequestOp:   PushToReadyQueueRequest,
-				Inputs:      []interface{}{task.Topic, task.Id},
+				Inputs:      []interface{}{task.Topic, task.Id, false},
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
@@ -341,11 +341,12 @@ POLL_LOOP:
 				log.Debug().Msgf("all subscribed topics: %v", topics)
 
 				/* start to pop task from ready queue */
+				// TODO: 在无任务和有任务两种状态之间切换会带来额外的延时, 可能会影响具体的业务
 				resp = make(chan *RedisRWResponse)
 				req = &RedisRWRequest{
 					RequestType: ReadyQueueRequest,
 					RequestOp:   BlockPopFromReadyQueueRequest,
-					Inputs:      []interface{}{topics, DefaultBlockPopFromReadyQueueTimeout},
+					Inputs:      []interface{}{topics, DefaultBlockPopFromReadyQueueTimeout, false},
 					ResponseCh:  resp,
 				}
 				dq.sendRedisRWRequest(req)
