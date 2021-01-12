@@ -53,9 +53,10 @@ func main() {
 	var cfg conf.DelayQueueService
 	util.LoadConfigFileOrPanic(*cfgPathFlag, &cfg)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	// 生成全局上下文控制器
+	gctx, gcancel := context.WithCancel(context.Background())
 	defer func() {
-		cancel()
+		gcancel()
 	}()
 
 	srv := newTaskDelayQueueServiceServer(&cfg)
@@ -64,7 +65,7 @@ func main() {
 	}()
 
 	// 开启grpc服务
-	go serveGPRC(ctx, srv, cfg.GRPCEndpoint)
+	go serveGPRC(gctx, srv, cfg.GRPCEndpoint)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
