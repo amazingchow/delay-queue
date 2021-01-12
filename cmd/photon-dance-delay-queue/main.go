@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -25,7 +27,23 @@ func main() {
 	flag.Parse()
 
 	// 设置全局logger
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
+	logOutput := zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}
+	logOutput.FormatTimestamp = func(i interface{}) string {
+		return fmt.Sprintf("[%v]", i)
+	}
+	logOutput.FormatLevel = func(i interface{}) string {
+		return strings.ToUpper(fmt.Sprintf("[%-6s]", i))
+	}
+	logOutput.FormatFieldName = func(i interface{}) string {
+		return strings.ToUpper(fmt.Sprintf("<%s: ", i))
+	}
+	logOutput.FormatFieldValue = func(i interface{}) string {
+		return fmt.Sprintf("%s>", i)
+	}
+	logOutput.FormatMessage = func(i interface{}) string {
+		return fmt.Sprintf("%s", i)
+	}
+	log.Logger = log.Output(logOutput)
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	if *verboseFlag {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)

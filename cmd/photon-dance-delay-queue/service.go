@@ -36,7 +36,7 @@ func serveGPRC(ctx context.Context, srv *taskDelayQueueServiceServer, ep string)
 	// Register reflection service on gRPC server.
 	reflection.Register(grpcServer)
 
-	log.Info().Msgf("grpc service is listening at \x1b[1;31m%s\x1b[0m", ep)
+	log.Info().Str("GRPC", ep).Msgf("grpc service is listening at \x1b[1;31m%s\x1b[0m", ep)
 	go func() {
 		if err := grpcServer.Serve(l); err != nil {
 			log.Warn().Err(err)
