@@ -75,12 +75,12 @@ REDIS_RW_LOOP:
 		case req := <-dq.topicRWChannel:
 			{
 				if req.RequestOp == PutTopicRequest {
-					err := dq.putTopic(req.Inputs[0].(string), req.Inputs[1].(string))
+					err := dq.putTopic(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}
 				} else if req.RequestOp == ListTopicRequest {
-					v, err := dq.listTopic(req.Inputs[0].(string))
+					v, err := dq.listTopic(req.Inputs[0].(string), req.Inputs[1].(bool))
 					if err != nil {
 						req.ResponseCh <- &RedisRWResponse{
 							Err: err,
@@ -92,7 +92,7 @@ REDIS_RW_LOOP:
 						}
 					}
 				} else if req.RequestOp == HasTopicRequest {
-					v, err := dq.hasTopic(req.Inputs[0].(string), req.Inputs[1].(string))
+					v, err := dq.hasTopic(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
 					if err != nil {
 						req.ResponseCh <- &RedisRWResponse{
 							Err: err,
@@ -104,7 +104,7 @@ REDIS_RW_LOOP:
 						}
 					}
 				} else if req.RequestOp == DelTopicRequest {
-					err := dq.delTopic(req.Inputs[0].(string), req.Inputs[1].(string))
+					err := dq.delTopic(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}

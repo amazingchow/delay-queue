@@ -144,7 +144,7 @@ func (dq *DelayQueue) PushTopic(topic string) error {
 	req := &RedisRWRequest{
 		RequestType: TopicRequest,
 		RequestOp:   PutTopicRequest,
-		Inputs:      []interface{}{DefaultTopicSetName, topic},
+		Inputs:      []interface{}{DefaultTopicSetName, topic, false},
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
@@ -162,7 +162,7 @@ func (dq *DelayQueue) RemoveTopic(topic string) error {
 	req := &RedisRWRequest{
 		RequestType: TopicRequest,
 		RequestOp:   DelTopicRequest,
-		Inputs:      []interface{}{DefaultTopicSetName, topic},
+		Inputs:      []interface{}{DefaultTopicSetName, topic, false},
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
@@ -325,7 +325,7 @@ POLL_LOOP:
 				req := &RedisRWRequest{
 					RequestType: TopicRequest,
 					RequestOp:   ListTopicRequest,
-					Inputs:      []interface{}{DefaultTopicSetName},
+					Inputs:      []interface{}{DefaultTopicSetName, false},
 					ResponseCh:  resp,
 				}
 				dq.sendRedisRWRequest(req)
