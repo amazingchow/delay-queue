@@ -328,12 +328,8 @@ POLL_LOOP:
 					ResponseCh:  resp,
 				}
 				dq.sendRedisRWRequest(req)
-				outs = <-resp
-				if outs.Err != nil {
-					log.Error().Err(outs.Err).Msgf("failed to add task <id: %s> into bucket", task.Id)
-				}
 
-				// publish ready task to kafka
+				/* start to publish ready task to kafka */
 				msg, _ := proto.Marshal(&pb.Task{
 					Id:            task.Id,
 					AttachedTopic: task.Topic,
