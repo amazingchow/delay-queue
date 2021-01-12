@@ -35,12 +35,17 @@ func (srv *TaskDelayQueueServiceServer) PushTask(ctx context.Context, req *pb.Pu
 	task := &delayqueue.Task{}
 	task.Id = req.GetTask().GetId()
 	task.Topic = req.GetTask().GetAttachedTopic()
-	task.Delay = time.Now().Unix() + int64(req.GetTask().GetDelay())
+	task.Delay = time.Now().Unix() + int64(req.GetTask().GetDelay()) // 当前时间戳 + 相对时间 = 绝对时间
 	task.TTR = int64(req.GetTask().GetTtr())
 	task.Blob = req.GetTask().GetPayload()
+
 	if err := srv.inst.Push(task); err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	if IsContextDone(ctx) {
+		return nil, status.Errorf(codes.DeadlineExceeded, "system may be under busy")
+	}
+
 	return &pb.PushTaskResponse{}, nil
 }
 
@@ -52,6 +57,10 @@ func (srv *TaskDelayQueueServiceServer) FinishTask(ctx context.Context, req *pb.
 	if err := srv.inst.Remove(req.GetTaskId()); err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	if IsContextDone(ctx) {
+		return nil, status.Errorf(codes.DeadlineExceeded, "system may be under busy")
+	}
+
 	return &pb.FinishTaskResponse{}, nil
 }
 
@@ -64,9 +73,13 @@ func (srv *TaskDelayQueueServiceServer) CheckTask(ctx context.Context, req *pb.C
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	if IsContextDone(ctx) {
+		return nil, status.Errorf(codes.DeadlineExceeded, "system may be under busy")
+	}
 	if task == nil {
 		return &pb.CheckTaskResponse{}, nil
 	}
+
 	return &pb.CheckTaskResponse{
 		Task: &pb.Task{
 			Id:            task.Id,
@@ -85,6 +98,10 @@ func (srv *TaskDelayQueueServiceServer) SubscribeTopic(ctx context.Context, req 
 	if err := srv.inst.PushTopic(req.GetTopic()); err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	if IsContextDone(ctx) {
+		return nil, status.Errorf(codes.DeadlineExceeded, "system may be under busy")
+	}
+
 	return &pb.SubscribeTopicResponse{}, nil
 }
 
@@ -96,5 +113,9 @@ func (srv *TaskDelayQueueServiceServer) UnsubscribeTopic(ctx context.Context, re
 	if err := srv.inst.RemoveTopic(req.GetTopic()); err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	if IsContextDone(ctx) {
+		return nil, status.Errorf(codes.DeadlineExceeded, "system may be under busy")
+	}
+
 	return &pb.UnsubscribeTopicResponse{}, nil
 }

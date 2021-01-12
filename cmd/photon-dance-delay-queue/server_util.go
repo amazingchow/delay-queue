@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -49,4 +51,13 @@ func UnsubscribeTopicPreCheck(req *pb.UnsubscribeTopicRequest) error {
 		return status.Errorf(codes.InvalidArgument, "empty topic")
 	}
 	return nil
+}
+
+func IsContextDone(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
 }
