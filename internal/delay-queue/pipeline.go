@@ -55,7 +55,7 @@ func (dq *DelayQueue) sendRedisRWRequest(req *RedisRWRequest) {
 		}
 	case ReadyQueueRequest:
 		{
-			dq.readyQueueRWChannel <- req
+			dq.readyQRWChannel <- req
 		}
 	default:
 		{
@@ -160,7 +160,7 @@ REDIS_RW_LOOP:
 			{
 				break REDIS_RW_LOOP
 			}
-		case req := <-dq.readyQueueRWChannel:
+		case req := <-dq.readyQRWChannel:
 			{
 				if req.RequestOp == PushToReadyQueueRequest {
 					err := dq.pushToReadyQueue(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))

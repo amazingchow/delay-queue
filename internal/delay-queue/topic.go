@@ -5,7 +5,7 @@ import (
 )
 
 /*
-	key -> share the same default key "DefaultTopicSetName"
+	key -> share the same default key "delay_queue_topic_set"
 
 	using SET
 */

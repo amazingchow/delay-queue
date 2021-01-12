@@ -18,14 +18,13 @@ type DelayQueue struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	taskRWController    *TaskRWController
-	topicRWChannel      chan *RedisRWRequest
-	bucketRWChannel     chan *RedisRWRequest
-	readyQueueRWChannel chan *RedisRWRequest
+	taskRWController *TaskRWController
+	topicRWChannel   chan *RedisRWRequest
+	bucketRWChannel  chan *RedisRWRequest
+	readyQRWChannel  chan *RedisRWRequest
 
 	bucketCh <-chan string
 	redisCli *redis.RedisConnPoolSingleton
-
 	producer *kafka.Producer
 }
 
@@ -35,14 +34,13 @@ func NewDelayQueue(cfg *conf.DelayQueueService) *DelayQueue {
 		ctx:    ctx,
 		cancel: cancel,
 
-		taskRWController:    NewTaskRWController(),
-		topicRWChannel:      make(chan *RedisRWRequest, 1024),
-		bucketRWChannel:     make(chan *RedisRWRequest, 1024),
-		readyQueueRWChannel: make(chan *RedisRWRequest, 1024),
+		taskRWController: NewTaskRWController(),
+		topicRWChannel:   make(chan *RedisRWRequest, 1024),
+		bucketRWChannel:  make(chan *RedisRWRequest, 1024),
+		readyQRWChannel:  make(chan *RedisRWRequest, 1024),
 
 		bucketCh: spawnBuckets(ctx),
 		redisCli: redis.GetOrCreateInstance(cfg.RedisService),
-
 		producer: kafka.NewProducer(cfg.KafkaService),
 	}
 	go dq.handleTopicRWRequest(ctx)
@@ -87,6 +85,9 @@ func spawnBuckets(ctx context.Context) <-chan string {
 	return ch
 }
 
+// DelayQueue的Push/PushTopic/RemoveTopic按照原来的处理流程, 可能会受主循环影响而被阻塞
+// 因此作乐观处理, 不等待处理结果直接返回, 由调用方确认是否操作成功
+
 func (dq *DelayQueue) Push(task *Task) error {
 	/* start to add task */
 	err := dq.taskRWController.PutTask(dq.redisCli, task.Id, task, false)
@@ -96,7 +97,7 @@ func (dq *DelayQueue) Push(task *Task) error {
 	}
 
 	/* start to push task into bucket */
-	resp := make(chan *RedisRWResponse)
+	resp := make(chan *RedisRWResponse, 1)
 	req := &RedisRWRequest{
 		RequestType: BucketRequest,
 		RequestOp:   PushToBucketRequest,
@@ -104,11 +105,6 @@ func (dq *DelayQueue) Push(task *Task) error {
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
-	outs := <-resp
-	if outs.Err != nil {
-		log.Error().Err(outs.Err).Msgf("failed to add task <id: %s> into bucket", task.Id)
-		return outs.Err
-	}
 	log.Debug().Msgf("add a new task <%s>", task.Id)
 	return nil
 }
@@ -140,7 +136,7 @@ func (dq *DelayQueue) Get(taskId string) (*Task, error) {
 
 func (dq *DelayQueue) PushTopic(topic string) error {
 	/* start to add topic */
-	resp := make(chan *RedisRWResponse)
+	resp := make(chan *RedisRWResponse, 1)
 	req := &RedisRWRequest{
 		RequestType: TopicRequest,
 		RequestOp:   PutTopicRequest,
@@ -148,17 +144,12 @@ func (dq *DelayQueue) PushTopic(topic string) error {
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
-	outs := <-resp
-	if outs.Err != nil {
-		log.Error().Err(outs.Err).Msgf("failed to add topic <id: %s>", topic)
-		return outs.Err
-	}
 	return nil
 }
 
 func (dq *DelayQueue) RemoveTopic(topic string) error {
 	/* start to delete topic */
-	resp := make(chan *RedisRWResponse)
+	resp := make(chan *RedisRWResponse, 1)
 	req := &RedisRWRequest{
 		RequestType: TopicRequest,
 		RequestOp:   DelTopicRequest,
@@ -166,11 +157,6 @@ func (dq *DelayQueue) RemoveTopic(topic string) error {
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
-	outs := <-resp
-	if outs.Err != nil {
-		log.Error().Err(outs.Err).Msgf("failed to remove topic <id: %s>", topic)
-		return outs.Err
-	}
 	return nil
 }
 
