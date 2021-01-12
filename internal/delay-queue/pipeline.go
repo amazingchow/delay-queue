@@ -47,6 +47,7 @@ const (
 	BlockPopFromReadyQueueRequest RedisRWRequestOp = 12
 )
 
+// TODO: 设计更细粒度的并发控制, 仅针对单个key的操作做pipeline管理
 func (dq *DelayQueue) sendRedisRWRequest(req *RedisRWRequest) {
 	switch req.RequestType {
 	case TaskRequest:
