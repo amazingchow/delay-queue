@@ -24,7 +24,7 @@ type DelayQueue struct {
 	readyQueueRWChannel chan *RedisRWRequest
 
 	bucketCh <-chan string
-	redisCli *redis.RedisPoolSingleton
+	redisCli *redis.RedisConnPoolSingleton
 
 	producer *kafka.Producer
 }

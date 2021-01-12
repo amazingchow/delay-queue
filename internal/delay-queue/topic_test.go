@@ -16,11 +16,11 @@ func TestTopicCURD(t *testing.T) {
 		SentinelMasterName:  "mymaster",
 		SentinelPassword:    "Pwd123!@",
 		RedisMasterPassword: "sOmE_sEcUrE_pAsS",
-		RedisPoolMaxIdle:    3,
-		RedisPoolMaxActive:  64,
-		RedisConnectTimeout: 500,
-		RedisReadTimeout:    500,
-		RedisWriteTimeout:   500,
+		RedisPoolMaxIdleConns:    3,
+		RedisPoolMaxActiveConns:  64,
+		RedisConnectTimeoutMsec: 500,
+		RedisReadTimeoutMsec:    500,
+		RedisWriteTimeoutMsec:   500,
 	}
 
 	dq := &DelayQueue{
@@ -28,7 +28,7 @@ func TestTopicCURD(t *testing.T) {
 	}
 
 	// 先清理环境
-	_, err := dq.redisCli.ExecCommand("DEL", DefaultTopicSetName)
+	_, err := redis.ExecCommand(dq.redisCli, false,  "DEL", DefaultTopicSetName)
 	assert.Empty(t, err)
 
 	fakeTopis := []string{
@@ -62,7 +62,7 @@ func TestTopicCURD(t *testing.T) {
 	}
 
 	// 退出之前, 再次清理环境
-	_, err = dq.redisCli.ExecCommand("DEL", DefaultTopicSetName)
+	_, err = redis.ExecCommand(dq.redisCli, false,  "DEL", DefaultTopicSetName)
 	assert.Empty(t, err)
 
 	redis.ReleaseInstance()

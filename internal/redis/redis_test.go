@@ -9,25 +9,25 @@ import (
 )
 
 func TestRedisClientCURD(t *testing.T) {
-	fakeRedisCfg := &conf.Redis{
-		SentinelEndpoints:   []string{"localhost:26379", "localhost:26380", "localhost:26381"},
-		SentinelMasterName:  "mymaster",
-		SentinelPassword:    "Pwd123!@",
-		RedisMasterPassword: "sOmE_sEcUrE_pAsS",
-		RedisPoolMaxIdle:    3,
-		RedisPoolMaxActive:  64,
-		RedisConnectTimeout: 500,
-		RedisReadTimeout:    500,
-		RedisWriteTimeout:   500,
+	fakeRedisCfg := &conf.RedisService{
+		SentinelEndpoints:       []string{"localhost:26379", "localhost:26380", "localhost:26381"},
+		SentinelMasterName:      "mymaster",
+		SentinelPassword:        "Pwd123!@",
+		RedisMasterPassword:     "sOmE_sEcUrE_pAsS",
+		RedisPoolMaxIdleConns:   3,
+		RedisPoolMaxActiveConns: 64,
+		RedisConnectTimeoutMsec: 500,
+		RedisReadTimeoutMsec:    500,
+		RedisWriteTimeoutMsec:   500,
 	}
 
 	inst := GetOrCreateInstance(fakeRedisCfg)
 
-	_, err := inst.ExecCommand("EXISTS", "foo")
+	_, err := ExecCommand(inst, true, "EXISTS", "foo")
 	assert.Empty(t, err)
-	_, err = inst.ExecCommand("SET", "msg:hello", "Hello Redis!!!")
+	_, err = ExecCommand(inst, true, "SET", "msg:hello", "Hello Redis!!!")
 	assert.Empty(t, err)
-	ret, err := inst.ExecCommand("GET", "msg:hello")
+	ret, err := ExecCommand(inst, true, "GET", "msg:hello")
 	assert.Empty(t, err)
 	assert.Equal(t, "Hello Redis!!!", string(ret.([]byte)))
 

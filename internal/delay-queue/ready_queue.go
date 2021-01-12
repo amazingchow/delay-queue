@@ -2,12 +2,14 @@ package delayqueue
 
 import (
 	"fmt"
+
+	"github.com/amazingchow/photon-dance-delay-queue/internal/redis"
 )
 
 // 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (dq *DelayQueue) pushToReadyQueue(topic string, jobId string) error {
 	readyQ := fmt.Sprintf(DefaultReadyQueueNameFormatter, topic)
-	_, err := dq.redisCli.ExecCommand("RPUSH", readyQ, jobId)
+	_, err := redis.ExecCommand(dq.redisCli, false,  "RPUSH", readyQ, jobId)
 	return err
 }
 
@@ -20,7 +22,7 @@ func (dq *DelayQueue) blockPopFromReadyQueue(topics []string, timeout int) (stri
 	}
 	args = append(args, timeout)
 
-	v, err := dq.redisCli.ExecCommand("BLPOP", args...)
+	v, err := redis.ExecCommand(dq.redisCli, false,  "BLPOP", args...)
 	if err != nil {
 		return "", err
 	}

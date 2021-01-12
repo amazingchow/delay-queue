@@ -2,6 +2,8 @@ package delayqueue
 
 import (
 	"github.com/vmihailenco/msgpack"
+
+	"github.com/amazingchow/photon-dance-delay-queue/internal/redis"
 )
 
 type Task struct {
@@ -18,13 +20,13 @@ func (dq *DelayQueue) putTask(key string, task *Task) error {
 	if err != nil {
 		return err
 	}
-	_, err = dq.redisCli.ExecCommand("SET", key, v)
+	_, err = redis.ExecCommand(dq.redisCli, false,  "SET", key, v)
 	return err
 }
 
 // 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (dq *DelayQueue) getTask(key string) (*Task, error) {
-	v, err := dq.redisCli.ExecCommand("GET", key)
+	v, err := redis.ExecCommand(dq.redisCli, false,  "GET", key)
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +43,6 @@ func (dq *DelayQueue) getTask(key string) (*Task, error) {
 
 // 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (dq *DelayQueue) delTask(key string) error {
-	_, err := dq.redisCli.ExecCommand("DEL", key)
+	_, err := redis.ExecCommand(dq.redisCli, false,  "DEL", key)
 	return err
 }

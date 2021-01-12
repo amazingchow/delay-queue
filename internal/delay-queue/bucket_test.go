@@ -13,15 +13,15 @@ import (
 
 func TestBucketCURD(t *testing.T) {
 	fakeRedisCfg := &conf.RedisService{
-		SentinelEndpoints:   []string{"localhost:26379", "localhost:26380", "localhost:26381"},
-		SentinelMasterName:  "mymaster",
-		SentinelPassword:    "Pwd123!@",
-		RedisMasterPassword: "sOmE_sEcUrE_pAsS",
-		RedisPoolMaxIdle:    3,
-		RedisPoolMaxActive:  64,
-		RedisConnectTimeout: 500,
-		RedisReadTimeout:    500,
-		RedisWriteTimeout:   500,
+		SentinelEndpoints:       []string{"localhost:26379", "localhost:26380", "localhost:26381"},
+		SentinelMasterName:      "mymaster",
+		SentinelPassword:        "Pwd123!@",
+		RedisMasterPassword:     "sOmE_sEcUrE_pAsS",
+		RedisPoolMaxIdleConns:   3,
+		RedisPoolMaxActiveConns: 64,
+		RedisConnectTimeoutMsec: 500,
+		RedisReadTimeoutMsec:    500,
+		RedisWriteTimeoutMsec:   500,
 	}
 
 	dq := &DelayQueue{
@@ -30,7 +30,7 @@ func TestBucketCURD(t *testing.T) {
 	fakeBucket := fmt.Sprintf(DefaultBucketNameFormatter, 1)
 
 	// 先清理环境
-	_, err := dq.redisCli.ExecCommand("DEL", fakeBucket)
+	_, err := redis.ExecCommand(dq.redisCli, false, "DEL", fakeBucket)
 	assert.Empty(t, err)
 
 	fakeTaskIds := []string{
@@ -60,7 +60,7 @@ func TestBucketCURD(t *testing.T) {
 	assert.Equal(t, 3, next)
 
 	// 退出之前, 再次清理环境
-	_, err = dq.redisCli.ExecCommand("DEL", fakeBucket)
+	_, err = redis.ExecCommand(dq.redisCli, false, "DEL", fakeBucket)
 	assert.Empty(t, err)
 
 	redis.ReleaseInstance()

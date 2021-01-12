@@ -15,11 +15,11 @@ func TestTaskCURD(t *testing.T) {
 		SentinelMasterName:  "mymaster",
 		SentinelPassword:    "Pwd123!@",
 		RedisMasterPassword: "sOmE_sEcUrE_pAsS",
-		RedisPoolMaxIdle:    3,
-		RedisPoolMaxActive:  64,
-		RedisConnectTimeout: 500,
-		RedisReadTimeout:    500,
-		RedisWriteTimeout:   500,
+		RedisPoolMaxIdleConns:    3,
+		RedisPoolMaxActiveConns:  64,
+		RedisConnectTimeoutMsec: 500,
+		RedisReadTimeoutMsec:    500,
+		RedisWriteTimeoutMsec:   500,
 	}
 
 	dq := &DelayQueue{
@@ -48,7 +48,7 @@ func TestTaskCURD(t *testing.T) {
 	}
 	for _, task := range fakeTasks {
 		// 先清理环境
-		_, err := dq.redisCli.ExecCommand("DEL", task.Id)
+		_, err := redis.ExecCommand(dq.redisCli, false,  "DEL", task.Id)
 		assert.Empty(t, err)
 
 		err = dq.putTask(task.Id, task)
@@ -69,7 +69,7 @@ func TestTaskCURD(t *testing.T) {
 
 	// 退出之前, 再次清理环境
 	for _, task := range fakeTasks {
-		_, err := dq.redisCli.ExecCommand("DEL", task.Id)
+		_, err := redis.ExecCommand(dq.redisCli, false,  "DEL", task.Id)
 		assert.Empty(t, err)
 	}
 
