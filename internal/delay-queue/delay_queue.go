@@ -2,7 +2,6 @@ package delayqueue
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -23,7 +22,6 @@ type DelayQueue struct {
 	bucketRWChannel  chan *RedisRWRequest
 	readyQRWChannel  chan *RedisRWRequest
 
-	bucketCh <-chan string
 	redisCli *redis.RedisConnPoolSingleton
 	producer *kafka.Producer
 }
@@ -39,14 +37,13 @@ func NewDelayQueue(cfg *conf.DelayQueueService) *DelayQueue {
 		bucketRWChannel:  make(chan *RedisRWRequest, 1024),
 		readyQRWChannel:  make(chan *RedisRWRequest, 1024),
 
-		bucketCh: spawnBuckets(ctx),
 		redisCli: redis.GetOrCreateInstance(cfg.RedisService),
 		producer: kafka.NewProducer(cfg.KafkaService),
 	}
 	go dq.handleTopicRWRequest(ctx)
 	go dq.handleBucketRWRequest(ctx)
 	go dq.handleReadyQueueRWRequest(ctx)
-	go dq.startAllTimers(ctx)
+	go dq.handleTimer(ctx)
 	go dq.poll(ctx)
 	return dq
 }
@@ -57,32 +54,6 @@ func (dq *DelayQueue) Close() {
 		dq.cancel()
 	}
 	dq.producer.Close()
-}
-
-func spawnBuckets(ctx context.Context) <-chan string {
-	ch := make(chan string)
-	go func(ctx context.Context, ch chan string) {
-		i := 1
-	SPAWN_LOOP:
-		for {
-			select {
-			case <-ctx.Done():
-				{
-					break SPAWN_LOOP
-				}
-			default:
-				{
-					ch <- fmt.Sprintf(DefaultBucketNameFormatter, i)
-					if i >= DefaultBucketCnt {
-						i = 1
-					} else {
-						i++
-					}
-				}
-			}
-		}
-	}(ctx, ch)
-	return ch
 }
 
 // DelayQueue的Push/PushTopic/RemoveTopic按照原来的处理流程, 可能会受主循环影响而被阻塞
@@ -101,7 +72,7 @@ func (dq *DelayQueue) Push(task *Task) error {
 	req := &RedisRWRequest{
 		RequestType: BucketRequest,
 		RequestOp:   PushToBucketRequest,
-		Inputs:      []interface{}{<-dq.bucketCh, task.Delay, task.Id, false},
+		Inputs:      []interface{}{DefaultBucketName, task.Delay, task.Id, false},
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
@@ -160,13 +131,7 @@ func (dq *DelayQueue) RemoveTopic(topic string) error {
 	return nil
 }
 
-func (dq *DelayQueue) startAllTimers(ctx context.Context) {
-	for i := 0; i < DefaultBucketCnt; i++ {
-		go dq.handleSingleTimer(ctx, fmt.Sprintf(DefaultBucketNameFormatter, i))
-	}
-}
-
-func (dq *DelayQueue) handleSingleTimer(ctx context.Context, bucket string) {
+func (dq *DelayQueue) handleTimer(ctx context.Context) {
 	timer := time.NewTicker(1 * time.Second)
 TICK_LOOP:
 	for {
@@ -177,26 +142,26 @@ TICK_LOOP:
 			}
 		case t := <-timer.C:
 			{
-				dq.timerHandler(t.Unix(), bucket)
+				dq.timerHandler(t.Unix())
 			}
 		}
 	}
 }
 
-func (dq *DelayQueue) timerHandler(now int64, bucket string) {
+func (dq *DelayQueue) timerHandler(now int64) {
 	for {
 		/* start to get task from bucket */
 		resp := make(chan *RedisRWResponse)
 		req := &RedisRWRequest{
 			RequestType: BucketRequest,
 			RequestOp:   GetOneFromBucketRequest,
-			Inputs:      []interface{}{bucket, false},
+			Inputs:      []interface{}{DefaultBucketName, false},
 			ResponseCh:  resp,
 		}
 		dq.sendRedisRWRequest(req)
 		outs := <-resp
 		if outs.Err != nil {
-			log.Error().Err(outs.Err).Msgf("failed to scan bucket <name: %s>", bucket)
+			log.Error().Err(outs.Err).Msgf("failed to scan bucket <name: %s>", DefaultBucketName)
 			return
 		}
 		bucketItem := outs.Outputs[0].(*BucketItem)
@@ -223,7 +188,7 @@ func (dq *DelayQueue) timerHandler(now int64, bucket string) {
 			req := &RedisRWRequest{
 				RequestType: BucketRequest,
 				RequestOp:   DelFromBucketRequest,
-				Inputs:      []interface{}{bucket, bucketItem.TaskId, false},
+				Inputs:      []interface{}{DefaultBucketName, bucketItem.TaskId, false},
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
@@ -236,7 +201,7 @@ func (dq *DelayQueue) timerHandler(now int64, bucket string) {
 			req := &RedisRWRequest{
 				RequestType: ReadyQueueRequest,
 				RequestOp:   PushToReadyQueueRequest,
-				Inputs:      []interface{}{task.Topic, task.Id, false},
+				Inputs:      []interface{}{DefaultReadyQueueName, task.Id, false},
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
@@ -246,7 +211,7 @@ func (dq *DelayQueue) timerHandler(now int64, bucket string) {
 			req = &RedisRWRequest{
 				RequestType: BucketRequest,
 				RequestOp:   DelFromBucketRequest,
-				Inputs:      []interface{}{bucket, task.Id, false},
+				Inputs:      []interface{}{DefaultBucketName, task.Id, false},
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
@@ -290,7 +255,7 @@ POLL_LOOP:
 				req = &RedisRWRequest{
 					RequestType: ReadyQueueRequest,
 					RequestOp:   BlockPopFromReadyQueueRequest,
-					Inputs:      []interface{}{topics, DefaultBlockPopFromReadyQueueTimeout, false},
+					Inputs:      []interface{}{DefaultReadyQueueName, DefaultBlockPopFromReadyQueueTimeout, false},
 					ResponseCh:  resp,
 				}
 				dq.sendRedisRWRequest(req)
@@ -316,6 +281,18 @@ POLL_LOOP:
 					continue
 				}
 
+				/* check whether the task has been subscribed or not, if not, just pass it */
+				subscribed := false
+				for _, topic := range topics {
+					if topic == task.Topic {
+						subscribed = true
+						break
+					}
+				}
+				if !subscribed {
+					continue
+				}
+
 				// TTR的设计目的是为了保证消息传输的可靠性
 				// 任务执行完成后, 消费端需要调用finish接口去删除任务, 否则任务会重复投递, 消费端必须能处理同一任务多次投递的情形
 				timestamp := time.Now().Unix() + task.TTR
@@ -324,7 +301,7 @@ POLL_LOOP:
 				req = &RedisRWRequest{
 					RequestType: BucketRequest,
 					RequestOp:   PushToBucketRequest,
-					Inputs:      []interface{}{<-dq.bucketCh, timestamp, task.Id, false},
+					Inputs:      []interface{}{DefaultBucketName, timestamp, task.Id, false},
 					ResponseCh:  resp,
 				}
 				dq.sendRedisRWRequest(req)

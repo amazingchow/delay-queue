@@ -28,7 +28,7 @@ func serveGPRC(ctx context.Context, srv *TaskDelayQueueServiceServer, ep string)
 		}),
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Time:    5 * time.Minute,
-			Timeout: 30 * time.Second, // 允许已标记为非活跃客户端连接最长可存活的时间
+			Timeout: 1 * time.Minute, // 允许已标记为非活跃客户端连接最长可存活的时间
 		}),
 	}
 	grpcServer := grpc.NewServer(opts...)
