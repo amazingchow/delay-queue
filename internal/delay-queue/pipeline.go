@@ -168,7 +168,7 @@ REDIS_RW_LOOP:
 						Err: err,
 					}
 				} else if req.RequestOp == BlockPopFromReadyQueueRequest {
-					v, err := dq.blockPopFromReadyQueue(req.Inputs[0].([]string), req.Inputs[1].(int), req.Inputs[2].(bool))
+					v, err := dq.blockPopFromReadyQueue(req.Inputs[0].(string), req.Inputs[1].(int), req.Inputs[2].(bool))
 					if err != nil {
 						req.ResponseCh <- &RedisRWResponse{
 							Err: err,

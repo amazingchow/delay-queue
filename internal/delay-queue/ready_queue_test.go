@@ -1,7 +1,6 @@
 package delayqueue
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,11 +25,9 @@ func TestReadyQueueCURD(t *testing.T) {
 	dq := &DelayQueue{
 		redisCli: redis.GetOrCreateInstance(fakeRedisCfg),
 	}
-	fakeTopic := "inventory_service_line"
-	fakeReadyQueue := fmt.Sprintf(DefaultReadyQueueNameFormatter, fakeTopic)
 
 	// 先清理环境
-	_, err := redis.ExecCommand(dq.redisCli, false, "DEL", fakeReadyQueue)
+	_, err := redis.ExecCommand(dq.redisCli, false, "DEL", DefaultReadyQueueName)
 	assert.Empty(t, err)
 
 	fakeTaskIds := []string{
@@ -39,13 +36,13 @@ func TestReadyQueueCURD(t *testing.T) {
 		"f58d644e-a2fc-44ce-851c-7530390cfce",
 	}
 	for _, taskId := range fakeTaskIds {
-		err = dq.pushToReadyQueue(fakeTopic, taskId, true)
+		err = dq.pushToReadyQueue(DefaultReadyQueueName, taskId, true)
 		assert.Empty(t, err)
 	}
 
 	next := 0
 	for {
-		taskId, err := dq.blockPopFromReadyQueue([]string{fakeTopic}, 1, true)
+		taskId, err := dq.blockPopFromReadyQueue(DefaultReadyQueueName, 1, true)
 		assert.Empty(t, err)
 		if taskId == "" {
 			break
@@ -56,7 +53,7 @@ func TestReadyQueueCURD(t *testing.T) {
 	assert.Equal(t, 3, next)
 
 	// 退出之前, 再次清理环境
-	_, err = redis.ExecCommand(dq.redisCli, false, "DEL", fakeReadyQueue)
+	_, err = redis.ExecCommand(dq.redisCli, false, "DEL", DefaultReadyQueueName)
 	assert.Empty(t, err)
 
 	redis.ReleaseInstance()
