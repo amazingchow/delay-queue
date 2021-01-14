@@ -14,7 +14,8 @@ import (
 )
 
 type RedisConnPoolSingleton struct {
-	p *redis.Pool
+	db int
+	p  *redis.Pool
 }
 
 var (
@@ -44,6 +45,7 @@ func GetOrCreateInstance(cfg *conf.RedisService) *RedisConnPoolSingleton {
 			},
 		}
 		instance = &RedisConnPoolSingleton{}
+		instance.db = cfg.RedisDatabase
 		instance.p = &redis.Pool{
 			Dial: func() (redis.Conn, error) {
 				master, err := sntnl.MasterAddr()
@@ -86,10 +88,16 @@ func ReleaseInstance() {
 
 // ExecCommand 执行redis命令, 完成后自动归还连接.
 func ExecCommand(inst *RedisConnPoolSingleton, debug bool, cmd string, args ...interface{}) (interface{}, error) {
+	conn := getConn(inst, debug)
+	defer conn.Close()
+	return conn.Do(cmd, args...)
+}
+
+func getConn(inst *RedisConnPoolSingleton, debug bool) redis.Conn {
 	conn := inst.p.Get()
 	if debug {
 		conn = redis.NewLoggingConn(conn, log.New(os.Stderr, "", 0), "redigo")
 	}
-	defer conn.Close()
-	return conn.Do(cmd, args...)
+	conn.Do("SELECT", inst.db) // nolint
+	return conn
 }

@@ -10,6 +10,7 @@ type RedisService struct {
 	SentinelEndpoints           []string `json:"sentinel_endpoints"`
 	SentinelMasterName          string   `json:"sentinel_master_name"`
 	SentinelPassword            string   `json:"sentinel_password"`
+	RedisDatabase               int      `json:"redis_database"`
 	RedisMasterPassword         string   `json:"redis_master_password"`
 	RedisPoolMaxIdleConns       int      `json:"redis_pool_max_idle_conns"`        // 连接池最大空闲连接数
 	RedisPoolMaxActiveConns     int      `json:"redis_pool_max_active_conns"`      // 连接池最大激活连接数
