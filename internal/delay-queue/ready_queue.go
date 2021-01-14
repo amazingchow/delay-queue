@@ -25,7 +25,6 @@ func NewReadyQueue() *ReadyQueue {
 	}
 }
 
-// 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (rq *ReadyQueue) PushToReadyQueue(inst *redis.RedisConnPoolSingleton, key string, jobId string, debug bool) error {
 	rq.cond.L.Lock()
 	defer rq.cond.L.Unlock()
@@ -38,7 +37,6 @@ func (rq *ReadyQueue) PushToReadyQueue(inst *redis.RedisConnPoolSingleton, key s
 	return err
 }
 
-// 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
 func (rq *ReadyQueue) BlockPopFromReadyQueue(inst *redis.RedisConnPoolSingleton, key string, timeout int, debug bool) (string, error) {
 	rq.cond.L.Lock()
 	for rq.len == 0 {
