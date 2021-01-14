@@ -20,7 +20,7 @@ type DelayQueue struct {
 	taskRWController *TaskRWController
 	topicRWChannel   chan *RedisRWRequest
 	bucketRWChannel  chan *RedisRWRequest
-	readyQRWChannel  chan *RedisRWRequest
+	readyQ           *ReadyQueue
 
 	redisCli *redis.RedisConnPoolSingleton
 	producer *kafka.Producer
@@ -35,14 +35,13 @@ func NewDelayQueue(cfg *conf.DelayQueueService) *DelayQueue {
 		taskRWController: NewTaskRWController(),
 		topicRWChannel:   make(chan *RedisRWRequest, 1024),
 		bucketRWChannel:  make(chan *RedisRWRequest, 1024),
-		readyQRWChannel:  make(chan *RedisRWRequest, 1024),
+		readyQ:           NewReadyQueue(),
 
 		redisCli: redis.GetOrCreateInstance(cfg.RedisService),
 		producer: kafka.NewProducer(cfg.KafkaService),
 	}
 	go dq.handleTopicRWRequest(ctx)
 	go dq.handleBucketRWRequest(ctx)
-	go dq.handleReadyQueueRWRequest(ctx)
 	go dq.handleTimer(ctx)
 	go dq.poll(ctx)
 	return dq
@@ -197,14 +196,7 @@ func (dq *DelayQueue) timerHandler(now int64) {
 		// 再次确认任务延迟执行时间是否小于等于当前时间
 		if task.Delay <= now {
 			/* start to push task into ready queue */
-			resp := make(chan *RedisRWResponse, 1)
-			req := &RedisRWRequest{
-				RequestType: ReadyQueueRequest,
-				RequestOp:   PushToReadyQueueRequest,
-				Inputs:      []interface{}{DefaultReadyQueueName, task.Id, false},
-				ResponseCh:  resp,
-			}
-			dq.sendRedisRWRequest(req)
+			dq.readyQ.PushToReadyQueue(dq.redisCli, DefaultReadyQueueName, task.Id, false) // nolint
 
 			/* start to delete task from bucket */
 			resp = make(chan *RedisRWResponse, 1)
@@ -251,20 +243,11 @@ POLL_LOOP:
 
 				/* start to pop task from ready queue */
 				// TODO: 在无任务和有任务两种状态之间切换会带来额外的延时, 可能会影响具体的业务
-				resp = make(chan *RedisRWResponse)
-				req = &RedisRWRequest{
-					RequestType: ReadyQueueRequest,
-					RequestOp:   BlockPopFromReadyQueueRequest,
-					Inputs:      []interface{}{DefaultReadyQueueName, DefaultBlockPopFromReadyQueueTimeout, false},
-					ResponseCh:  resp,
-				}
-				dq.sendRedisRWRequest(req)
-				outs = <-resp
-				if outs.Err != nil {
-					log.Error().Err(outs.Err).Msg("failed to pop from ready queue")
+				taskId, err := dq.readyQ.BlockPopFromReadyQueue(dq.redisCli, DefaultReadyQueueName, DefaultBlockPopFromReadyQueueTimeout, false)
+				if err != nil {
+					log.Error().Err(err).Msg("failed to pop from ready queue")
 					continue
 				}
-				taskId := outs.Outputs[0].(string)
 				if taskId == "" {
 					continue
 				}

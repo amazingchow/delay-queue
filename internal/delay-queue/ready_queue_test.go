@@ -21,13 +21,11 @@ func TestReadyQueueCURD(t *testing.T) {
 		RedisReadTimeoutMsec:    500,
 		RedisWriteTimeoutMsec:   500,
 	}
-
-	dq := &DelayQueue{
-		redisCli: redis.GetOrCreateInstance(fakeRedisCfg),
-	}
+	redisCli := redis.GetOrCreateInstance(fakeRedisCfg)
+	rq := NewReadyQueue()
 
 	// 先清理环境
-	_, err := redis.ExecCommand(dq.redisCli, false, "DEL", DefaultReadyQueueName)
+	_, err := redis.ExecCommand(redisCli, false, "DEL", DefaultReadyQueueName)
 	assert.Empty(t, err)
 
 	fakeTaskIds := []string{
@@ -36,24 +34,22 @@ func TestReadyQueueCURD(t *testing.T) {
 		"f58d644e-a2fc-44ce-851c-7530390cfce",
 	}
 	for _, taskId := range fakeTaskIds {
-		err = dq.pushToReadyQueue(DefaultReadyQueueName, taskId, true)
+		err = rq.PushToReadyQueue(redisCli, DefaultReadyQueueName, taskId, true)
 		assert.Empty(t, err)
 	}
 
-	next := 0
-	for {
-		taskId, err := dq.blockPopFromReadyQueue(DefaultReadyQueueName, 1, true)
-		assert.Empty(t, err)
-		if taskId == "" {
-			break
-		}
-		assert.Equal(t, fakeTaskIds[next], taskId)
-		next++
-	}
-	assert.Equal(t, 3, next)
+	taskId, err := rq.BlockPopFromReadyQueue(redisCli, DefaultReadyQueueName, 1, true)
+	assert.Empty(t, err)
+	assert.Equal(t, fakeTaskIds[0], taskId)
+	taskId, err = rq.BlockPopFromReadyQueue(redisCli, DefaultReadyQueueName, 1, true)
+	assert.Empty(t, err)
+	assert.Equal(t, fakeTaskIds[1], taskId)
+	taskId, err = rq.BlockPopFromReadyQueue(redisCli, DefaultReadyQueueName, 1, true)
+	assert.Empty(t, err)
+	assert.Equal(t, fakeTaskIds[2], taskId)
 
 	// 退出之前, 再次清理环境
-	_, err = redis.ExecCommand(dq.redisCli, false, "DEL", DefaultReadyQueueName)
+	_, err = redis.ExecCommand(redisCli, false, "DEL", DefaultReadyQueueName)
 	assert.Empty(t, err)
 
 	redis.ReleaseInstance()

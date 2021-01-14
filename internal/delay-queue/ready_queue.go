@@ -1,6 +1,10 @@
 package delayqueue
 
 import (
+	"sync"
+
+	"github.com/rs/zerolog/log"
+
 	"github.com/amazingchow/photon-dance-delay-queue/internal/redis"
 )
 
@@ -10,15 +14,41 @@ import (
 	using LIST
 */
 
+type ReadyQueue struct {
+	cond *sync.Cond
+	len  int
+}
+
+func NewReadyQueue() *ReadyQueue {
+	return &ReadyQueue{
+		cond: sync.NewCond(&sync.Mutex{}),
+	}
+}
+
 // 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
-func (dq *DelayQueue) pushToReadyQueue(key string, jobId string, debug bool) error {
-	_, err := redis.ExecCommand(dq.redisCli, debug, "RPUSH", key, jobId)
+func (rq *ReadyQueue) PushToReadyQueue(inst *redis.RedisConnPoolSingleton, key string, jobId string, debug bool) error {
+	rq.cond.L.Lock()
+	defer rq.cond.L.Unlock()
+
+	_, err := redis.ExecCommand(inst, debug, "RPUSH", key, jobId)
+	if err == nil {
+		rq.len++
+		rq.cond.Signal()
+	}
 	return err
 }
 
 // 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
-func (dq *DelayQueue) blockPopFromReadyQueue(key string, timeout int, debug bool) (string, error) {
-	v, err := redis.ExecCommand(dq.redisCli, debug, "BLPOP", key, timeout)
+func (rq *ReadyQueue) BlockPopFromReadyQueue(inst *redis.RedisConnPoolSingleton, key string, timeout int, debug bool) (string, error) {
+	rq.cond.L.Lock()
+	for rq.len == 0 {
+		log.Debug().Msgf("ready queue is empty now, wait for task coming")
+		rq.cond.Wait()
+		log.Debug().Msgf("new task has been pushed, pop it now")
+	}
+	defer rq.cond.L.Unlock()
+
+	v, err := redis.ExecCommand(inst, debug, "BLPOP", key, timeout)
 	if err != nil {
 		return "", err
 	}
@@ -30,5 +60,6 @@ func (dq *DelayQueue) blockPopFromReadyQueue(key string, timeout int, debug bool
 	if len(vv) == 0 {
 		return "", nil
 	}
+	rq.len--
 	return string(vv[1].([]byte)), nil
 }

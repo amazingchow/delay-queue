@@ -21,9 +21,8 @@ type RedisRWResponse struct {
 type RedisRequestType int
 
 const (
-	TopicRequest      RedisRequestType = 1
-	BucketRequest     RedisRequestType = 2
-	ReadyQueueRequest RedisRequestType = 3
+	TopicRequest  RedisRequestType = 1
+	BucketRequest RedisRequestType = 2
 )
 
 type RedisRWRequestOp int
@@ -37,9 +36,6 @@ const (
 	PushToBucketRequest     RedisRWRequestOp = 5
 	GetOneFromBucketRequest RedisRWRequestOp = 6
 	DelFromBucketRequest    RedisRWRequestOp = 7
-
-	PushToReadyQueueRequest       RedisRWRequestOp = 8
-	BlockPopFromReadyQueueRequest RedisRWRequestOp = 9
 )
 
 // TODO: 设计更细粒度的并发控制, 仅针对单个key的操作做pipeline管理
@@ -52,10 +48,6 @@ func (dq *DelayQueue) sendRedisRWRequest(req *RedisRWRequest) {
 	case BucketRequest:
 		{
 			dq.bucketRWChannel <- req
-		}
-	case ReadyQueueRequest:
-		{
-			dq.readyQRWChannel <- req
 		}
 	default:
 		{
@@ -145,39 +137,6 @@ REDIS_RW_LOOP:
 					err := dq.delFromBucket(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
-					}
-				}
-			}
-		}
-	}
-}
-
-func (dq *DelayQueue) handleReadyQueueRWRequest(ctx context.Context) {
-REDIS_RW_LOOP:
-	for {
-		select {
-		case <-ctx.Done():
-			{
-				break REDIS_RW_LOOP
-			}
-		case req := <-dq.readyQRWChannel:
-			{
-				if req.RequestOp == PushToReadyQueueRequest {
-					err := dq.pushToReadyQueue(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
-					req.ResponseCh <- &RedisRWResponse{
-						Err: err,
-					}
-				} else if req.RequestOp == BlockPopFromReadyQueueRequest {
-					v, err := dq.blockPopFromReadyQueue(req.Inputs[0].(string), req.Inputs[1].(int), req.Inputs[2].(bool))
-					if err != nil {
-						req.ResponseCh <- &RedisRWResponse{
-							Err: err,
-						}
-					} else {
-						req.ResponseCh <- &RedisRWResponse{
-							Outputs: []interface{}{v},
-							Err:     nil,
-						}
 					}
 				}
 			}
