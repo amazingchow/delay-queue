@@ -17,10 +17,9 @@ type DelayQueue struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	taskRWController *TaskRWController
-	topicRWChannel   chan *RedisRWRequest
-	bucketRWChannel  chan *RedisRWRequest
-	readyQ           *ReadyQueue
+	topicRWChannel  chan *RedisRWRequest
+	bucketRWChannel chan *RedisRWRequest
+	readyQ          *ReadyQueue
 
 	redisCli *redis.RedisConnPoolSingleton
 	producer *kafka.Producer
@@ -32,10 +31,9 @@ func NewDelayQueue(cfg *conf.DelayQueueService) *DelayQueue {
 		ctx:    ctx,
 		cancel: cancel,
 
-		taskRWController: NewTaskRWController(),
-		topicRWChannel:   make(chan *RedisRWRequest, 1024),
-		bucketRWChannel:  make(chan *RedisRWRequest, 1024),
-		readyQ:           NewReadyQueue(),
+		topicRWChannel:  make(chan *RedisRWRequest, 1024),
+		bucketRWChannel: make(chan *RedisRWRequest, 1024),
+		readyQ:          NewReadyQueue(),
 
 		redisCli: redis.GetOrCreateInstance(cfg.RedisService),
 		producer: kafka.NewProducer(cfg.KafkaService),
@@ -60,7 +58,7 @@ func (dq *DelayQueue) Close() {
 
 func (dq *DelayQueue) Push(task *Task) error {
 	/* start to add task */
-	err := dq.taskRWController.PutTask(dq.redisCli, task.Id, task)
+	err := dq.putTask(task.Id, task)
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to add task <id: %s>", task.Id)
 		return err
@@ -81,7 +79,7 @@ func (dq *DelayQueue) Push(task *Task) error {
 
 func (dq *DelayQueue) Remove(taskId string) error {
 	/* start to delete task */
-	err := dq.taskRWController.DelTask(dq.redisCli, taskId)
+	err := dq.delTask(taskId)
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to remove task <id: %s>", taskId)
 		return err
@@ -92,7 +90,7 @@ func (dq *DelayQueue) Remove(taskId string) error {
 
 func (dq *DelayQueue) Get(taskId string) (*Task, error) {
 	/* start to get task */
-	task, err := dq.taskRWController.GetTask(dq.redisCli, taskId)
+	task, err := dq.getTask(taskId)
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to get task <id: %s>", taskId)
 		return nil, err
@@ -175,7 +173,7 @@ func (dq *DelayQueue) timerHandler(now int64) {
 
 		// 延迟执行时间小于等于当前时间, 取出任务并放入ReadyQueue
 		/* start to get task */
-		task, err := dq.taskRWController.GetTask(dq.redisCli, bucketItem.TaskId)
+		task, err := dq.getTask(bucketItem.TaskId)
 		if err != nil {
 			log.Error().Err(err).Msgf("failed to get task <id: %s>", bucketItem.TaskId)
 			continue
@@ -254,7 +252,7 @@ POLL_LOOP:
 				log.Debug().Msgf("get ready task <%s>", taskId)
 
 				/* start to get task */
-				task, err := dq.taskRWController.GetTask(dq.redisCli, taskId)
+				task, err := dq.getTask(taskId)
 				if err != nil {
 					log.Error().Err(err).Msgf("failed to get task <id: %s>", taskId)
 					continue

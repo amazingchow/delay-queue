@@ -1,11 +1,7 @@
 package delayqueue
 
 import (
-	"sync"
-
 	"github.com/vmihailenco/msgpack"
-
-	"github.com/amazingchow/photon-dance-delay-queue/internal/redis"
 )
 
 type Task struct {
@@ -20,90 +16,17 @@ type Task struct {
 	key -> task id
 */
 
-/*
-	Improvement:
-
-	通常我们讨论的redis并发读写问题是针对同一个key的, 由于不同的task使用不同的key来存储,
-	因此将所有task的读写命令都串行化, 是一种效率非常低下的做法, 势必会影响整体的吞吐性能.
-	优化并发控制粒度, 将并发竞争控制限定在单个key上.
-*/
-
-type TaskRWController struct {
-	mu          sync.Mutex
-	LookupTable map[string]*TaskRWControlView
-}
-
-func NewTaskRWController() *TaskRWController {
-	return &TaskRWController{
-		LookupTable: make(map[string]*TaskRWControlView),
-	}
-}
-
-func (ctrl *TaskRWController) PutTask(inst *redis.RedisConnPoolSingleton, key string, task *Task) error {
-	ctrl.mu.Lock()
-	view, exist := ctrl.LookupTable[key]
-	if !exist {
-		// 视图不存在, 新增并发控制视图
-		view = NewTaskRWControlView(key)
-		ctrl.LookupTable[key] = view
-	}
-	ctrl.mu.Unlock()
-	return view.putTask(inst, task)
-}
-
-func (ctrl *TaskRWController) GetTask(inst *redis.RedisConnPoolSingleton, key string) (*Task, error) {
-	ctrl.mu.Lock()
-	view, exist := ctrl.LookupTable[key]
-	if !exist {
-		// 视图不存在, 直接返回
-		ctrl.mu.Unlock()
-		return nil, nil
-	}
-	ctrl.mu.Unlock()
-	return view.getTask(inst)
-}
-
-func (ctrl *TaskRWController) DelTask(inst *redis.RedisConnPoolSingleton, key string) error {
-	ctrl.mu.Lock()
-	view, exist := ctrl.LookupTable[key]
-	if !exist {
-		// 视图不存在, 直接返回
-		ctrl.mu.Unlock()
-		return nil
-	}
-	delete(ctrl.LookupTable, key)
-	ctrl.mu.Unlock()
-	return view.delTask(inst)
-}
-
-type TaskRWControlView struct {
-	mu  sync.Mutex
-	key string
-}
-
-func NewTaskRWControlView(key string) *TaskRWControlView {
-	return &TaskRWControlView{
-		key: key,
-	}
-}
-
-func (view *TaskRWControlView) putTask(inst *redis.RedisConnPoolSingleton, task *Task) error {
-	view.mu.Lock()
-	defer view.mu.Unlock()
-
+func (dq *DelayQueue) putTask(key string, task *Task) error {
 	v, err := msgpack.Marshal(task)
 	if err != nil {
 		return err
 	}
-	_, err = inst.ExecCommand("SET", view.key, v)
+	_, err = dq.redisCli.ExecCommand("SET", key, v)
 	return err
 }
 
-func (view *TaskRWControlView) getTask(inst *redis.RedisConnPoolSingleton) (*Task, error) {
-	view.mu.Lock()
-	defer view.mu.Unlock()
-
-	v, err := inst.ExecCommand("GET", view.key)
+func (dq *DelayQueue) getTask(key string) (*Task, error) {
+	v, err := dq.redisCli.ExecCommand("GET", key)
 	if err != nil {
 		return nil, err
 	}
@@ -118,10 +41,7 @@ func (view *TaskRWControlView) getTask(inst *redis.RedisConnPoolSingleton) (*Tas
 	return &task, nil
 }
 
-func (view *TaskRWControlView) delTask(inst *redis.RedisConnPoolSingleton) error {
-	view.mu.Lock()
-	defer view.mu.Unlock()
-
-	_, err := inst.ExecCommand("DEL", view.key)
+func (dq *DelayQueue) delTask(key string) error {
+	_, err := dq.redisCli.ExecCommand("DEL", key)
 	return err
 }
