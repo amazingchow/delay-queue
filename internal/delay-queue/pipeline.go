@@ -38,7 +38,7 @@ const (
 	DelFromBucketRequest    RedisRWRequestOp = 7
 )
 
-// TODO: 设计更细粒度的并发控制, 仅针对单个key的操作做pipeline管理
+// 利用命令管道来提高服务的响应速度, 并且提供更高层面的数据一致性.
 func (dq *DelayQueue) sendRedisRWRequest(req *RedisRWRequest) {
 	switch req.RequestType {
 	case TopicRequest:
