@@ -23,11 +23,11 @@ func TestRedisClientCURD(t *testing.T) {
 
 	inst := GetOrCreateInstance(fakeRedisCfg)
 
-	_, err := ExecCommand(inst, true, "EXISTS", "foo")
+	_, err := inst.ExecCommand("EXISTS", "foo")
 	assert.Empty(t, err)
-	_, err = ExecCommand(inst, true, "SET", "msg:hello", "Hello Redis!!!")
+	_, err = inst.ExecCommand("SET", "msg:hello", "Hello Redis!!!")
 	assert.Empty(t, err)
-	ret, err := ExecCommand(inst, true, "GET", "msg:hello")
+	ret, err := inst.ExecCommand("GET", "msg:hello")
 	assert.Empty(t, err)
 	assert.Equal(t, "Hello Redis!!!", string(ret.([]byte)))
 

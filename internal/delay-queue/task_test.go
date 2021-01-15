@@ -46,28 +46,28 @@ func TestTaskCURD(t *testing.T) {
 	}
 	for _, task := range fakeTasks {
 		// 先清理环境
-		_, err := redis.ExecCommand(redisCli, false, "DEL", task.Id)
+		_, err := redisCli.ExecCommand("DEL", task.Id)
 		assert.Empty(t, err)
 
-		err = ctrl.PutTask(redisCli, task.Id, task, true)
+		err = ctrl.PutTask(redisCli, task.Id, task)
 		assert.Empty(t, err)
 	}
 	for _, task := range fakeTasks {
-		retTask, err := ctrl.GetTask(redisCli, task.Id, true)
+		retTask, err := ctrl.GetTask(redisCli, task.Id)
 		assert.Empty(t, err)
 		assert.Equal(t, task.Topic, retTask.Topic)
 
-		err = ctrl.DelTask(redisCli, task.Id, true)
+		err = ctrl.DelTask(redisCli, task.Id)
 		assert.Empty(t, err)
 
-		retTask, err = ctrl.GetTask(redisCli, task.Id, true)
+		retTask, err = ctrl.GetTask(redisCli, task.Id)
 		assert.Empty(t, err)
 		assert.Empty(t, retTask)
 	}
 
 	// 退出之前, 再次清理环境
 	for _, task := range fakeTasks {
-		_, err := redis.ExecCommand(redisCli, false, "DEL", task.Id)
+		_, err := redisCli.ExecCommand("DEL", task.Id)
 		assert.Empty(t, err)
 	}
 

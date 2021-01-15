@@ -39,7 +39,7 @@ func NewTaskRWController() *TaskRWController {
 	}
 }
 
-func (ctrl *TaskRWController) PutTask(inst *redis.RedisConnPoolSingleton, key string, task *Task, debug bool) error {
+func (ctrl *TaskRWController) PutTask(inst *redis.RedisConnPoolSingleton, key string, task *Task) error {
 	ctrl.mu.Lock()
 	view, exist := ctrl.LookupTable[key]
 	if !exist {
@@ -48,10 +48,10 @@ func (ctrl *TaskRWController) PutTask(inst *redis.RedisConnPoolSingleton, key st
 		ctrl.LookupTable[key] = view
 	}
 	ctrl.mu.Unlock()
-	return view.putTask(inst, task, debug)
+	return view.putTask(inst, task)
 }
 
-func (ctrl *TaskRWController) GetTask(inst *redis.RedisConnPoolSingleton, key string, debug bool) (*Task, error) {
+func (ctrl *TaskRWController) GetTask(inst *redis.RedisConnPoolSingleton, key string) (*Task, error) {
 	ctrl.mu.Lock()
 	view, exist := ctrl.LookupTable[key]
 	if !exist {
@@ -60,10 +60,10 @@ func (ctrl *TaskRWController) GetTask(inst *redis.RedisConnPoolSingleton, key st
 		return nil, nil
 	}
 	ctrl.mu.Unlock()
-	return view.getTask(inst, debug)
+	return view.getTask(inst)
 }
 
-func (ctrl *TaskRWController) DelTask(inst *redis.RedisConnPoolSingleton, key string, debug bool) error {
+func (ctrl *TaskRWController) DelTask(inst *redis.RedisConnPoolSingleton, key string) error {
 	ctrl.mu.Lock()
 	view, exist := ctrl.LookupTable[key]
 	if !exist {
@@ -73,7 +73,7 @@ func (ctrl *TaskRWController) DelTask(inst *redis.RedisConnPoolSingleton, key st
 	}
 	delete(ctrl.LookupTable, key)
 	ctrl.mu.Unlock()
-	return view.delTask(inst, debug)
+	return view.delTask(inst)
 }
 
 type TaskRWControlView struct {
@@ -87,7 +87,7 @@ func NewTaskRWControlView(key string) *TaskRWControlView {
 	}
 }
 
-func (view *TaskRWControlView) putTask(inst *redis.RedisConnPoolSingleton, task *Task, debug bool) error {
+func (view *TaskRWControlView) putTask(inst *redis.RedisConnPoolSingleton, task *Task) error {
 	view.mu.Lock()
 	defer view.mu.Unlock()
 
@@ -95,15 +95,15 @@ func (view *TaskRWControlView) putTask(inst *redis.RedisConnPoolSingleton, task 
 	if err != nil {
 		return err
 	}
-	_, err = redis.ExecCommand(inst, debug, "SET", view.key, v)
+	_, err = inst.ExecCommand("SET", view.key, v)
 	return err
 }
 
-func (view *TaskRWControlView) getTask(inst *redis.RedisConnPoolSingleton, debug bool) (*Task, error) {
+func (view *TaskRWControlView) getTask(inst *redis.RedisConnPoolSingleton) (*Task, error) {
 	view.mu.Lock()
 	defer view.mu.Unlock()
 
-	v, err := redis.ExecCommand(inst, debug, "GET", view.key)
+	v, err := inst.ExecCommand("GET", view.key)
 	if err != nil {
 		return nil, err
 	}
@@ -118,10 +118,10 @@ func (view *TaskRWControlView) getTask(inst *redis.RedisConnPoolSingleton, debug
 	return &task, nil
 }
 
-func (view *TaskRWControlView) delTask(inst *redis.RedisConnPoolSingleton, debug bool) error {
+func (view *TaskRWControlView) delTask(inst *redis.RedisConnPoolSingleton) error {
 	view.mu.Lock()
 	defer view.mu.Unlock()
 
-	_, err := redis.ExecCommand(inst, debug, "DEL", view.key)
+	_, err := inst.ExecCommand("DEL", view.key)
 	return err
 }

@@ -28,7 +28,7 @@ func TestTopicCURD(t *testing.T) {
 	}
 
 	// 先清理环境
-	_, err := redis.ExecCommand(dq.redisCli, false, "DEL", DefaultTopicSetName)
+	_, err := dq.redisCli.ExecCommand("DEL", DefaultTopicSetName)
 	assert.Empty(t, err)
 
 	fakeTopis := []string{
@@ -37,14 +37,14 @@ func TestTopicCURD(t *testing.T) {
 		"inventory_service_line",
 	}
 	for _, topic := range fakeTopis {
-		err := dq.putTopic(DefaultTopicSetName, topic, true)
+		err := dq.putTopic(DefaultTopicSetName, topic)
 		assert.Empty(t, err)
-		has, err := dq.hasTopic(DefaultTopicSetName, topic, true)
+		has, err := dq.hasTopic(DefaultTopicSetName, topic)
 		assert.Empty(t, err)
 		assert.Equal(t, true, has)
 	}
 
-	allTopics, err := dq.listTopic(DefaultTopicSetName, true)
+	allTopics, err := dq.listTopic(DefaultTopicSetName)
 	assert.Empty(t, err)
 	assert.Equal(t, len(fakeTopis), len(allTopics))
 	sort.Strings(fakeTopis)
@@ -54,15 +54,15 @@ func TestTopicCURD(t *testing.T) {
 	}
 
 	for _, topic := range fakeTopis {
-		err := dq.delTopic(DefaultTopicSetName, topic, true)
+		err := dq.delTopic(DefaultTopicSetName, topic)
 		assert.Empty(t, err)
-		has, err := dq.hasTopic(DefaultTopicSetName, topic, true)
+		has, err := dq.hasTopic(DefaultTopicSetName, topic)
 		assert.Empty(t, err)
 		assert.Equal(t, false, has)
 	}
 
 	// 退出之前, 再次清理环境
-	_, err = redis.ExecCommand(dq.redisCli, false, "DEL", DefaultTopicSetName)
+	_, err = dq.redisCli.ExecCommand("DEL", DefaultTopicSetName)
 	assert.Empty(t, err)
 
 	redis.ReleaseInstance()

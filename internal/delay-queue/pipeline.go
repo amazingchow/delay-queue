@@ -67,12 +67,12 @@ REDIS_RW_LOOP:
 		case req := <-dq.topicRWChannel:
 			{
 				if req.RequestOp == PutTopicRequest {
-					err := dq.putTopic(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
+					err := dq.putTopic(req.Inputs[0].(string), req.Inputs[1].(string))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}
 				} else if req.RequestOp == ListTopicRequest {
-					v, err := dq.listTopic(req.Inputs[0].(string), req.Inputs[1].(bool))
+					v, err := dq.listTopic(req.Inputs[0].(string))
 					if err != nil {
 						req.ResponseCh <- &RedisRWResponse{
 							Err: err,
@@ -84,7 +84,7 @@ REDIS_RW_LOOP:
 						}
 					}
 				} else if req.RequestOp == HasTopicRequest {
-					v, err := dq.hasTopic(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
+					v, err := dq.hasTopic(req.Inputs[0].(string), req.Inputs[1].(string))
 					if err != nil {
 						req.ResponseCh <- &RedisRWResponse{
 							Err: err,
@@ -96,7 +96,7 @@ REDIS_RW_LOOP:
 						}
 					}
 				} else if req.RequestOp == DelTopicRequest {
-					err := dq.delTopic(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
+					err := dq.delTopic(req.Inputs[0].(string), req.Inputs[1].(string))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}
@@ -117,12 +117,12 @@ REDIS_RW_LOOP:
 		case req := <-dq.bucketRWChannel:
 			{
 				if req.RequestOp == PushToBucketRequest {
-					err := dq.pushToBucket(req.Inputs[0].(string), req.Inputs[1].(int64), req.Inputs[2].(string), req.Inputs[3].(bool))
+					err := dq.pushToBucket(req.Inputs[0].(string), req.Inputs[1].(int64), req.Inputs[2].(string))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}
 				} else if req.RequestOp == GetOneFromBucketRequest {
-					v, err := dq.getOneFromBucket(req.Inputs[0].(string), req.Inputs[1].(bool))
+					v, err := dq.getOneFromBucket(req.Inputs[0].(string))
 					if err != nil {
 						req.ResponseCh <- &RedisRWResponse{
 							Err: err,
@@ -134,7 +134,7 @@ REDIS_RW_LOOP:
 						}
 					}
 				} else if req.RequestOp == DelFromBucketRequest {
-					err := dq.delFromBucket(req.Inputs[0].(string), req.Inputs[1].(string), req.Inputs[2].(bool))
+					err := dq.delFromBucket(req.Inputs[0].(string), req.Inputs[1].(string))
 					req.ResponseCh <- &RedisRWResponse{
 						Err: err,
 					}

@@ -25,11 +25,11 @@ func NewReadyQueue() *ReadyQueue {
 	}
 }
 
-func (rq *ReadyQueue) PushToReadyQueue(inst *redis.RedisConnPoolSingleton, key string, jobId string, debug bool) error {
+func (rq *ReadyQueue) PushToReadyQueue(inst *redis.RedisConnPoolSingleton, key string, jobId string) error {
 	rq.cond.L.Lock()
 	defer rq.cond.L.Unlock()
 
-	_, err := redis.ExecCommand(inst, debug, "RPUSH", key, jobId)
+	_, err := inst.ExecCommand("RPUSH", key, jobId)
 	if err == nil {
 		rq.len++
 		rq.cond.Signal()
@@ -37,7 +37,7 @@ func (rq *ReadyQueue) PushToReadyQueue(inst *redis.RedisConnPoolSingleton, key s
 	return err
 }
 
-func (rq *ReadyQueue) BlockPopFromReadyQueue(inst *redis.RedisConnPoolSingleton, key string, timeout int, debug bool) (string, error) {
+func (rq *ReadyQueue) BlockPopFromReadyQueue(inst *redis.RedisConnPoolSingleton, key string, timeout int) (string, error) {
 	rq.cond.L.Lock()
 	for rq.len == 0 {
 		log.Debug().Msgf("ready queue is empty now, wait for task coming")
@@ -46,7 +46,7 @@ func (rq *ReadyQueue) BlockPopFromReadyQueue(inst *redis.RedisConnPoolSingleton,
 	}
 	defer rq.cond.L.Unlock()
 
-	v, err := redis.ExecCommand(inst, debug, "BLPOP", key, timeout)
+	v, err := inst.ExecCommand("BLPOP", key, timeout)
 	if err != nil {
 		return "", err
 	}

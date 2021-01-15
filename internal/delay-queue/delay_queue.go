@@ -60,7 +60,7 @@ func (dq *DelayQueue) Close() {
 
 func (dq *DelayQueue) Push(task *Task) error {
 	/* start to add task */
-	err := dq.taskRWController.PutTask(dq.redisCli, task.Id, task, false)
+	err := dq.taskRWController.PutTask(dq.redisCli, task.Id, task)
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to add task <id: %s>", task.Id)
 		return err
@@ -71,7 +71,7 @@ func (dq *DelayQueue) Push(task *Task) error {
 	req := &RedisRWRequest{
 		RequestType: BucketRequest,
 		RequestOp:   PushToBucketRequest,
-		Inputs:      []interface{}{DefaultBucketName, task.Delay, task.Id, false},
+		Inputs:      []interface{}{DefaultBucketName, task.Delay, task.Id},
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
@@ -81,7 +81,7 @@ func (dq *DelayQueue) Push(task *Task) error {
 
 func (dq *DelayQueue) Remove(taskId string) error {
 	/* start to delete task */
-	err := dq.taskRWController.DelTask(dq.redisCli, taskId, false)
+	err := dq.taskRWController.DelTask(dq.redisCli, taskId)
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to remove task <id: %s>", taskId)
 		return err
@@ -92,7 +92,7 @@ func (dq *DelayQueue) Remove(taskId string) error {
 
 func (dq *DelayQueue) Get(taskId string) (*Task, error) {
 	/* start to get task */
-	task, err := dq.taskRWController.GetTask(dq.redisCli, taskId, false)
+	task, err := dq.taskRWController.GetTask(dq.redisCli, taskId)
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to get task <id: %s>", taskId)
 		return nil, err
@@ -110,7 +110,7 @@ func (dq *DelayQueue) PushTopic(topic string) error {
 	req := &RedisRWRequest{
 		RequestType: TopicRequest,
 		RequestOp:   PutTopicRequest,
-		Inputs:      []interface{}{DefaultTopicSetName, topic, false},
+		Inputs:      []interface{}{DefaultTopicSetName, topic},
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
@@ -123,7 +123,7 @@ func (dq *DelayQueue) RemoveTopic(topic string) error {
 	req := &RedisRWRequest{
 		RequestType: TopicRequest,
 		RequestOp:   DelTopicRequest,
-		Inputs:      []interface{}{DefaultTopicSetName, topic, false},
+		Inputs:      []interface{}{DefaultTopicSetName, topic},
 		ResponseCh:  resp,
 	}
 	dq.sendRedisRWRequest(req)
@@ -154,7 +154,7 @@ func (dq *DelayQueue) timerHandler(now int64) {
 		req := &RedisRWRequest{
 			RequestType: BucketRequest,
 			RequestOp:   GetOneFromBucketRequest,
-			Inputs:      []interface{}{DefaultBucketName, false},
+			Inputs:      []interface{}{DefaultBucketName},
 			ResponseCh:  resp,
 		}
 		dq.sendRedisRWRequest(req)
@@ -175,7 +175,7 @@ func (dq *DelayQueue) timerHandler(now int64) {
 
 		// 延迟执行时间小于等于当前时间, 取出任务并放入ReadyQueue
 		/* start to get task */
-		task, err := dq.taskRWController.GetTask(dq.redisCli, bucketItem.TaskId, false)
+		task, err := dq.taskRWController.GetTask(dq.redisCli, bucketItem.TaskId)
 		if err != nil {
 			log.Error().Err(err).Msgf("failed to get task <id: %s>", bucketItem.TaskId)
 			continue
@@ -187,7 +187,7 @@ func (dq *DelayQueue) timerHandler(now int64) {
 			req := &RedisRWRequest{
 				RequestType: BucketRequest,
 				RequestOp:   DelFromBucketRequest,
-				Inputs:      []interface{}{DefaultBucketName, bucketItem.TaskId, false},
+				Inputs:      []interface{}{DefaultBucketName, bucketItem.TaskId},
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
@@ -196,14 +196,14 @@ func (dq *DelayQueue) timerHandler(now int64) {
 		// 再次确认任务延迟执行时间是否小于等于当前时间
 		if task.Delay <= now {
 			/* start to push task into ready queue */
-			dq.readyQ.PushToReadyQueue(dq.redisCli, DefaultReadyQueueName, task.Id, false) // nolint
+			dq.readyQ.PushToReadyQueue(dq.redisCli, DefaultReadyQueueName, task.Id) // nolint
 
 			/* start to delete task from bucket */
 			resp = make(chan *RedisRWResponse, 1)
 			req = &RedisRWRequest{
 				RequestType: BucketRequest,
 				RequestOp:   DelFromBucketRequest,
-				Inputs:      []interface{}{DefaultBucketName, task.Id, false},
+				Inputs:      []interface{}{DefaultBucketName, task.Id},
 				ResponseCh:  resp,
 			}
 			dq.sendRedisRWRequest(req)
@@ -226,7 +226,7 @@ POLL_LOOP:
 				req := &RedisRWRequest{
 					RequestType: TopicRequest,
 					RequestOp:   ListTopicRequest,
-					Inputs:      []interface{}{DefaultTopicSetName, false},
+					Inputs:      []interface{}{DefaultTopicSetName},
 					ResponseCh:  resp,
 				}
 				dq.sendRedisRWRequest(req)
@@ -243,7 +243,7 @@ POLL_LOOP:
 
 				/* start to pop task from ready queue */
 				// TODO: 在无任务和有任务两种状态之间切换会带来额外的延时, 可能会影响具体的业务
-				taskId, err := dq.readyQ.BlockPopFromReadyQueue(dq.redisCli, DefaultReadyQueueName, DefaultBlockPopFromReadyQueueTimeout, false)
+				taskId, err := dq.readyQ.BlockPopFromReadyQueue(dq.redisCli, DefaultReadyQueueName, DefaultBlockPopFromReadyQueueTimeout)
 				if err != nil {
 					log.Error().Err(err).Msg("failed to pop from ready queue")
 					continue
@@ -254,7 +254,7 @@ POLL_LOOP:
 				log.Debug().Msgf("get ready task <%s>", taskId)
 
 				/* start to get task */
-				task, err := dq.taskRWController.GetTask(dq.redisCli, taskId, false)
+				task, err := dq.taskRWController.GetTask(dq.redisCli, taskId)
 				if err != nil {
 					log.Error().Err(err).Msgf("failed to get task <id: %s>", taskId)
 					continue
@@ -284,7 +284,7 @@ POLL_LOOP:
 				req = &RedisRWRequest{
 					RequestType: BucketRequest,
 					RequestOp:   PushToBucketRequest,
-					Inputs:      []interface{}{DefaultBucketName, timestamp, task.Id, false},
+					Inputs:      []interface{}{DefaultBucketName, timestamp, task.Id},
 					ResponseCh:  resp,
 				}
 				dq.sendRedisRWRequest(req)
