@@ -94,6 +94,14 @@ func (p *RedisConnPoolSingleton) ExecCommand(cmd string, args ...interface{}) (i
 	return conn.Do(cmd, args...)
 }
 
+// ExecLuaScript 执行lua脚本, 完成后自动归还连接.
+func (p *RedisConnPoolSingleton) ExecLuaScript(src string, keyCount int, keysAndArgs ...interface{}) (interface{}, error) {
+	conn := p.getConn()
+	defer conn.Close()
+	luaScript := redis.NewScript(keyCount, src)
+	return luaScript.Do(conn, keysAndArgs...)
+}
+
 func (p *RedisConnPoolSingleton) getConn() redis.Conn {
 	conn := p.p.Get()
 	conn.Do("SELECT", p.db) // nolint
