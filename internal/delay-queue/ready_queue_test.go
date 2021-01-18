@@ -25,7 +25,7 @@ func TestReadyQueueCURD(t *testing.T) {
 	rq := NewReadyQueue()
 
 	// 先清理环境
-	_, err := redis.ExecCommand(redisCli, false, "DEL", DefaultReadyQueueName)
+	_, err := redisCli.ExecCommand("DEL", DefaultReadyQueueName)
 	assert.Empty(t, err)
 
 	fakeTaskIds := []string{
@@ -34,22 +34,22 @@ func TestReadyQueueCURD(t *testing.T) {
 		"f58d644e-a2fc-44ce-851c-7530390cfce",
 	}
 	for _, taskId := range fakeTaskIds {
-		err = rq.PushToReadyQueue(redisCli, DefaultReadyQueueName, taskId, true)
+		err = rq.PushToReadyQueue(redisCli, DefaultReadyQueueName, taskId)
 		assert.Empty(t, err)
 	}
 
-	taskId, err := rq.BlockPopFromReadyQueue(redisCli, DefaultReadyQueueName, 1, true)
+	taskId, err := rq.BlockPopFromReadyQueue(redisCli, DefaultReadyQueueName, 1)
 	assert.Empty(t, err)
 	assert.Equal(t, fakeTaskIds[0], taskId)
-	taskId, err = rq.BlockPopFromReadyQueue(redisCli, DefaultReadyQueueName, 1, true)
+	taskId, err = rq.BlockPopFromReadyQueue(redisCli, DefaultReadyQueueName, 1)
 	assert.Empty(t, err)
 	assert.Equal(t, fakeTaskIds[1], taskId)
-	taskId, err = rq.BlockPopFromReadyQueue(redisCli, DefaultReadyQueueName, 1, true)
+	taskId, err = rq.BlockPopFromReadyQueue(redisCli, DefaultReadyQueueName, 1)
 	assert.Empty(t, err)
 	assert.Equal(t, fakeTaskIds[2], taskId)
 
 	// 退出之前, 再次清理环境
-	_, err = redis.ExecCommand(redisCli, false, "DEL", DefaultReadyQueueName)
+	_, err = redisCli.ExecCommand("DEL", DefaultReadyQueueName)
 	assert.Empty(t, err)
 
 	redis.ReleaseInstance()

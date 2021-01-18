@@ -25,12 +25,11 @@ func NewReadyQueue() *ReadyQueue {
 	}
 }
 
-// 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
-func (rq *ReadyQueue) PushToReadyQueue(inst *redis.RedisConnPoolSingleton, key string, jobId string, debug bool) error {
+func (rq *ReadyQueue) PushToReadyQueue(inst *redis.RedisConnPoolSingleton, key string, jobId string) error {
 	rq.cond.L.Lock()
 	defer rq.cond.L.Unlock()
 
-	_, err := redis.ExecCommand(inst, debug, "RPUSH", key, jobId)
+	_, err := inst.ExecCommand("RPUSH", key, jobId)
 	if err == nil {
 		rq.len++
 		rq.cond.Signal()
@@ -38,8 +37,7 @@ func (rq *ReadyQueue) PushToReadyQueue(inst *redis.RedisConnPoolSingleton, key s
 	return err
 }
 
-// 为了解决分布式并发竞争问题, 其他地方不能直接调用, 一律通过命令管道来统一分发命令
-func (rq *ReadyQueue) BlockPopFromReadyQueue(inst *redis.RedisConnPoolSingleton, key string, timeout int, debug bool) (string, error) {
+func (rq *ReadyQueue) BlockPopFromReadyQueue(inst *redis.RedisConnPoolSingleton, key string, timeout int) (string, error) {
 	rq.cond.L.Lock()
 	for rq.len == 0 {
 		log.Debug().Msgf("ready queue is empty now, wait for task coming")
@@ -48,7 +46,7 @@ func (rq *ReadyQueue) BlockPopFromReadyQueue(inst *redis.RedisConnPoolSingleton,
 	}
 	defer rq.cond.L.Unlock()
 
-	v, err := redis.ExecCommand(inst, debug, "BLPOP", key, timeout)
+	v, err := inst.ExecCommand("BLPOP", key, timeout)
 	if err != nil {
 		return "", err
 	}

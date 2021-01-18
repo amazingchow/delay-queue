@@ -2,13 +2,12 @@ package redis
 
 import (
 	"errors"
-	"log"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/FZambia/sentinel"
 	"github.com/gomodule/redigo/redis"
+	"github.com/rs/zerolog/log"
 
 	conf "github.com/amazingchow/photon-dance-delay-queue/internal/config"
 )
@@ -39,6 +38,7 @@ func GetOrCreateInstance(cfg *conf.RedisService) *RedisConnPoolSingleton {
 					redis.DialPassword(cfg.SentinelPassword),
 				)
 				if err != nil {
+					log.Fatal().Err(err).Msg("failed to connect to redis server")
 					return nil, err
 				}
 				return conn, nil
@@ -58,6 +58,7 @@ func GetOrCreateInstance(cfg *conf.RedisService) *RedisConnPoolSingleton {
 					redis.DialPassword(cfg.RedisMasterPassword),
 				)
 				if err != nil {
+					log.Fatal().Err(err).Msg("failed to connect to redis server")
 					return nil, err
 				}
 				return conn, nil
@@ -87,17 +88,22 @@ func ReleaseInstance() {
 }
 
 // ExecCommand 执行redis命令, 完成后自动归还连接.
-func ExecCommand(inst *RedisConnPoolSingleton, debug bool, cmd string, args ...interface{}) (interface{}, error) {
-	conn := getConn(inst, debug)
+func (p *RedisConnPoolSingleton) ExecCommand(cmd string, args ...interface{}) (interface{}, error) {
+	conn := p.getConn()
 	defer conn.Close()
 	return conn.Do(cmd, args...)
 }
 
-func getConn(inst *RedisConnPoolSingleton, debug bool) redis.Conn {
-	conn := inst.p.Get()
-	if debug {
-		conn = redis.NewLoggingConn(conn, log.New(os.Stderr, "", 0), "redigo")
-	}
-	conn.Do("SELECT", inst.db) // nolint
+// ExecLuaScript 执行lua脚本, 完成后自动归还连接.
+func (p *RedisConnPoolSingleton) ExecLuaScript(src string, keyCount int, keysAndArgs ...interface{}) (interface{}, error) {
+	conn := p.getConn()
+	defer conn.Close()
+	luaScript := redis.NewScript(keyCount, src)
+	return luaScript.Do(conn, keysAndArgs...)
+}
+
+func (p *RedisConnPoolSingleton) getConn() redis.Conn {
+	conn := p.p.Get()
+	conn.Do("SELECT", p.db) // nolint
 	return conn
 }

@@ -28,7 +28,7 @@ func TestBucketCURD(t *testing.T) {
 	}
 
 	// 先清理环境
-	_, err := redis.ExecCommand(dq.redisCli, false, "DEL", DefaultBucketName)
+	_, err := dq.redisCli.ExecCommand("DEL", DefaultBucketName)
 	assert.Empty(t, err)
 
 	fakeTaskIds := []string{
@@ -37,28 +37,28 @@ func TestBucketCURD(t *testing.T) {
 		"f58d644e-a2fc-44ce-851c-7530390cfce",
 	}
 	for _, taskId := range fakeTaskIds {
-		err = dq.pushToBucket(DefaultBucketName, time.Now().Unix(), taskId, true)
+		err = dq.pushToBucket(DefaultBucketName, time.Now().Unix(), taskId)
 		assert.Empty(t, err)
 		time.Sleep(time.Second)
 	}
 
 	next := 0
 	for {
-		item, err := dq.getOneFromBucket(DefaultBucketName, true)
+		item, err := dq.getOneFromBucket(DefaultBucketName)
 		assert.Empty(t, err)
 		if item == nil {
 			break
 		}
 		assert.Equal(t, fakeTaskIds[next], item.TaskId)
 
-		err = dq.delFromBucket(DefaultBucketName, item.TaskId, true)
+		err = dq.delFromBucket(DefaultBucketName, item.TaskId)
 		assert.Empty(t, err)
 		next++
 	}
 	assert.Equal(t, 3, next)
 
 	// 退出之前, 再次清理环境
-	_, err = redis.ExecCommand(dq.redisCli, false, "DEL", DefaultBucketName)
+	_, err = dq.redisCli.ExecCommand("DEL", DefaultBucketName)
 	assert.Empty(t, err)
 
 	redis.ReleaseInstance()

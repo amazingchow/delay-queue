@@ -21,8 +21,9 @@ func TestTaskCURD(t *testing.T) {
 		RedisReadTimeoutMsec:    500,
 		RedisWriteTimeoutMsec:   500,
 	}
-	redisCli := redis.GetOrCreateInstance(fakeRedisCfg)
-	ctrl := NewTaskRWController()
+	dq := &DelayQueue{
+		redisCli: redis.GetOrCreateInstance(fakeRedisCfg),
+	}
 
 	fakeTasks := []*Task{
 		&Task{
@@ -46,28 +47,28 @@ func TestTaskCURD(t *testing.T) {
 	}
 	for _, task := range fakeTasks {
 		// 先清理环境
-		_, err := redis.ExecCommand(redisCli, false, "DEL", task.Id)
+		_, err := dq.redisCli.ExecCommand("DEL", task.Id)
 		assert.Empty(t, err)
 
-		err = ctrl.PutTask(redisCli, task.Id, task, true)
+		err = dq.putTask(task.Id, task)
 		assert.Empty(t, err)
 	}
 	for _, task := range fakeTasks {
-		retTask, err := ctrl.GetTask(redisCli, task.Id, true)
+		retTask, err := dq.getTask(task.Id)
 		assert.Empty(t, err)
 		assert.Equal(t, task.Topic, retTask.Topic)
 
-		err = ctrl.DelTask(redisCli, task.Id, true)
+		err = dq.delTask(task.Id)
 		assert.Empty(t, err)
 
-		retTask, err = ctrl.GetTask(redisCli, task.Id, true)
+		retTask, err = dq.getTask(task.Id)
 		assert.Empty(t, err)
 		assert.Empty(t, retTask)
 	}
 
 	// 退出之前, 再次清理环境
 	for _, task := range fakeTasks {
-		_, err := redis.ExecCommand(redisCli, false, "DEL", task.Id)
+		_, err := dq.redisCli.ExecCommand("DEL", task.Id)
 		assert.Empty(t, err)
 	}
 
