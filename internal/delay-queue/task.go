@@ -1,6 +1,7 @@
 package delayqueue
 
 import (
+	// TODO: change to "github.com/vmihailenco/msgpack/v5"
 	"github.com/vmihailenco/msgpack"
 )
 
