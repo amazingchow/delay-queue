@@ -1,8 +1,7 @@
 package delayqueue
 
 import (
-	// TODO: change to "github.com/vmihailenco/msgpack/v5"
-	"github.com/vmihailenco/msgpack"
+	msgpack "github.com/vmihailenco/msgpack/v5"
 )
 
 type Task struct {
