@@ -5,7 +5,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/amazingchow/photon-dance-delay-queue/internal/redis"
+	"github.com/amazingchow/delay-queue/internal/redis"
 )
 
 /*

@@ -1,28 +1,24 @@
-PROJECT     := github.com/amazingchow/photon-dance-delay-queue
 SRC         := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
-TARGETS     := photon-dance-delay-queue
+TARGETS     := delay-queue
 ALL_TARGETS := $(TARGETS)
 
 ifeq ($(race), 1)
-	BUILD_FLAGS := -race
+	BUILD_FLAGS += -race
 endif
 
 ifeq ($(debug), 1)
 	BUILD_FLAGS += -gcflags=all="-N -l"
 endif
 
+.PHONY: all
 all: build
 
+.PHONY: build
 build: $(ALL_TARGETS)
 
 $(TARGETS): $(SRC)
-ifeq ("$(GOMODULEPATH)", "")
-	@echo "no GOMODULEPATH env provided!!!"
-	@exit 1
-endif
-	go build $(BUILD_FLAGS) $(GOMODULEPATH)/$(PROJECT)/cmd/$@
+	go build $(BUILD_FLAGS) $(PWD)/cmd/$@
 
+.PHONY: clean
 clean:
 	rm -f $(ALL_TARGETS)
-
-.PHONY: all build clean

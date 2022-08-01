@@ -12,8 +12,10 @@
 *.out
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
 
-/photon-dance-delay-queue
+/delay-queue
 /mock/consumer/venv
 /mock/consumer/api/__pycache__
+
+.vscode

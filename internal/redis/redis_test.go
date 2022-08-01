@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	conf "github.com/amazingchow/photon-dance-delay-queue/internal/config"
+	conf "github.com/amazingchow/delay-queue/internal/config"
 )
 
 func TestRedisClientCURD(t *testing.T) {

@@ -241,5 +241,5 @@ var _TaskDelayQueueService_serviceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "github.com/amazingchow/photon-dance-delay-queue/pb/task-delay-queue-service.proto",
+	Metadata: "github.com/amazingchow/delay-queue/pb/task-delay-queue-service.proto",
 }

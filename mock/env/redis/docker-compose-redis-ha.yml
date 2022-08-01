@@ -18,7 +18,7 @@ services:
     ports:
       - 16379:6379
     volumes:
-      - ~/gomodule/github.com/amazingchow/photon-dance-delay-queue/mock/env/redis/conf.d/:/usr/local/etc/redis/
+      - ~/gomodule/github.com/amazingchow/delay-queue/mock/env/redis/conf.d/:/usr/local/etc/redis/
     networks:
       vpcbr:
         ipv4_address: 192.168.1.2
@@ -31,7 +31,7 @@ services:
     ports:
       - 16380:6379
     volumes:
-      - ~/gomodule/github.com/amazingchow/photon-dance-delay-queue/mock/env/redis/conf.d/:/usr/local/etc/redis/
+      - ~/gomodule/github.com/amazingchow/delay-queue/mock/env/redis/conf.d/:/usr/local/etc/redis/
     networks:
       vpcbr:
         ipv4_address: 192.168.1.3
@@ -46,7 +46,7 @@ services:
     ports:
       - 16381:6379
     volumes:
-      - ~/gomodule/github.com/amazingchow/photon-dance-delay-queue/mock/env/redis/conf.d/:/usr/local/etc/redis/
+      - ~/gomodule/github.com/amazingchow/delay-queue/mock/env/redis/conf.d/:/usr/local/etc/redis/
     networks:
       vpcbr:
         ipv4_address: 192.168.1.4
@@ -61,7 +61,7 @@ services:
     ports:
       - 26379:26379
     volumes:
-      - ~/gomodule/github.com/amazingchow/photon-dance-delay-queue/mock/env/redis/conf.d/:/usr/local/etc/redis/
+      - ~/gomodule/github.com/amazingchow/delay-queue/mock/env/redis/conf.d/:/usr/local/etc/redis/
     networks:
       vpcbr:
         ipv4_address: 192.168.1.5
@@ -78,7 +78,7 @@ services:
     ports:
       - 26380:26379
     volumes:
-      - ~/gomodule/github.com/amazingchow/photon-dance-delay-queue/mock/env/redis/conf.d/:/usr/local/etc/redis/
+      - ~/gomodule/github.com/amazingchow/delay-queue/mock/env/redis/conf.d/:/usr/local/etc/redis/
     networks:
       vpcbr:
         ipv4_address: 192.168.1.6
@@ -95,7 +95,7 @@ services:
     ports:
       - 26381:26379
     volumes:
-      - ~/gomodule/github.com/amazingchow/photon-dance-delay-queue/mock/env/redis/conf.d/:/usr/local/etc/redis/
+      - ~/gomodule/github.com/amazingchow/delay-queue/mock/env/redis/conf.d/:/usr/local/etc/redis/
     networks:
       vpcbr:
         ipv4_address: 192.168.1.7
