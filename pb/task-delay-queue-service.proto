@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/amazingchow/photon-dance-delay-queue/api";
+option go_package = "github.com/amazingchow/delay-queue/api";
 package amazingchow.photon_dance_delay_queue;
 
 message Task

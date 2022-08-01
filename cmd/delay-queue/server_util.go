@@ -6,7 +6,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/amazingchow/photon-dance-delay-queue/api"
+	pb "github.com/amazingchow/delay-queue/api"
 )
 
 func PushTaskPreCheck(req *pb.PushTaskRequest) error {

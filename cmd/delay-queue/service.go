@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	pb "github.com/amazingchow/photon-dance-delay-queue/api"
+	pb "github.com/amazingchow/delay-queue/api"
 )
 
 func serveGPRC(ctx context.Context, srv *TaskDelayQueueServiceServer, ep string) {

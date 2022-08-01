@@ -7,10 +7,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/amazingchow/photon-dance-delay-queue/api"
-	conf "github.com/amazingchow/photon-dance-delay-queue/internal/config"
-	"github.com/amazingchow/photon-dance-delay-queue/internal/kafka"
-	"github.com/amazingchow/photon-dance-delay-queue/internal/redis"
+	pb "github.com/amazingchow/delay-queue/api"
+	conf "github.com/amazingchow/delay-queue/internal/config"
+	"github.com/amazingchow/delay-queue/internal/kafka"
+	"github.com/amazingchow/delay-queue/internal/redis"
 )
 
 type DelayQueue struct {

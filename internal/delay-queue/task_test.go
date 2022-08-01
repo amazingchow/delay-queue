@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	conf "github.com/amazingchow/photon-dance-delay-queue/internal/config"
-	"github.com/amazingchow/photon-dance-delay-queue/internal/redis"
+	conf "github.com/amazingchow/delay-queue/internal/config"
+	"github.com/amazingchow/delay-queue/internal/redis"
 )
 
 func TestTaskCURD(t *testing.T) {

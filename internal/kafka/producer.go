@@ -6,7 +6,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog/log"
 
-	conf "github.com/amazingchow/photon-dance-delay-queue/internal/config"
+	conf "github.com/amazingchow/delay-queue/internal/config"
 )
 
 type Producer struct {

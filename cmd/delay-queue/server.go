@@ -7,9 +7,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/amazingchow/photon-dance-delay-queue/api"
-	conf "github.com/amazingchow/photon-dance-delay-queue/internal/config"
-	delayqueue "github.com/amazingchow/photon-dance-delay-queue/internal/delay-queue"
+	pb "github.com/amazingchow/delay-queue/api"
+	conf "github.com/amazingchow/delay-queue/internal/config"
+	delayqueue "github.com/amazingchow/delay-queue/internal/delay-queue"
 )
 
 type TaskDelayQueueServiceServer struct {

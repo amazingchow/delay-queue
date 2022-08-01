@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.25.0
 // 	protoc        v3.12.3
-// source: github.com/amazingchow/photon-dance-delay-queue/pb/task-delay-queue-service.proto
+// source: github.com/amazingchow/delay-queue/pb/task-delay-queue-service.proto
 
 package api
 

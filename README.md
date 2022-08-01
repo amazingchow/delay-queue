@@ -1,4 +1,4 @@
-# photon-dance-delay-queue
+# delay-queue
 
 redis-based delay queue is designed to provide message queue with delay-job-distribution.
 
@@ -17,14 +17,14 @@ redis-based delay queue is designed to provide message queue with delay-job-dist
 
 #### Clone
 
-* Clone this repo to your local machine using https://github.com/amazingchow/photon-dance-delay-queue.git.
+* Clone this repo to your local machine using https://github.com/amazingchow/delay-queue.git.
 
 #### Setup
 
 ```shell
 make build
 
-./photon-dance-delay-queue --conf=conf/delay_queue.json --verbose=true
+./delay-queue --conf=conf/delay_queue.json --verbose=true
 ```
 
 ## Reference
@@ -43,7 +43,7 @@ make build
 
 ### Step 3
 
-* 🔃 Create a new PR using https://github.com/amazingchow/photon-dance-delay-queue/compare!
+* 🔃 Create a new PR using https://github.com/amazingchow/delay-queue/compare!
 
 ## Support
 

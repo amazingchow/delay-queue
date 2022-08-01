@@ -28,8 +28,8 @@ if [ -z ${GOMODULEPATH} ]; then
 fi
 
 cd ${GOMODULEPATH}
-for i in $(ls ${GOMODULEPATH}/github.com/amazingchow/photon-dance-delay-queue/pb/*.proto); do
-	fn=github.com/amazingchow/photon-dance-delay-queue/pb/$(basename "$i")
+for i in $(ls ${GOMODULEPATH}/github.com/amazingchow/delay-queue/pb/*.proto); do
+	fn=github.com/amazingchow/delay-queue/pb/$(basename "$i")
 	echo "compile" $fn
 	# generate the messages
 	protoc -I/usr/local/include -I . --go_out=. "$fn"

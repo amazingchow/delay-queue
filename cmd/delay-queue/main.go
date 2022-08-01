@@ -14,8 +14,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	conf "github.com/amazingchow/photon-dance-delay-queue/internal/config"
-	"github.com/amazingchow/photon-dance-delay-queue/internal/util"
+	conf "github.com/amazingchow/delay-queue/internal/config"
+	"github.com/amazingchow/delay-queue/internal/util"
 )
 
 var (
